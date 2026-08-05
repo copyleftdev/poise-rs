@@ -17,25 +17,33 @@ async runtime, Tower, tracing, or a discovery implementation into every build.
 There is no umbrella crate. This is intentional dependency hygiene, not an
 unfinished convenience API.
 
-## Install from a pinned revision
+## Install from crates.io
 
-Before the first crates.io publication, use a Git dependency pinned to a commit:
+Add only the layers your application uses. All Poise crates share one version:
+
+```toml
+[dependencies]
+poise-core = "0.1"
+```
+
+For unreleased development work, pin a reviewed Git revision rather than a
+moving branch:
 
 ```toml
 [dependencies]
 poise-core = { git = "https://github.com/copyleftdev/poise-rs", rev = "<reviewed-40-character-commit>" }
 ```
 
-For a local workspace integration:
+For local workspace integration:
 
 ```toml
 [dependencies]
 poise-core = { path = "../poise-rs/crates/poise-core" }
 ```
 
-Replace the placeholder with a full commit hash you have reviewed. Do not
-depend on an unpinned branch in a release build. Poise is pre-1.0 and the
-default branch is allowed to advance.
+Replace the Git placeholder with a full commit hash you have reviewed. Do not
+depend on an unpinned branch in a release build. Poise is pre-1.0, so review the
+changelog before upgrading.
 
 ## Make a first selection
 

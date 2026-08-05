@@ -36,6 +36,11 @@
 //! let selected = RoundRobin::new().pick(&snapshot, &()).unwrap();
 //! assert_eq!(snapshot[selected.index()].key(), &"b");
 //! ```
+//!
+//! # Support
+//!
+//! Support continued Poise engineering through
+//! [TokenTip](https://tokentip.to/@copyleftdev).
 
 #![forbid(unsafe_code)]
 
