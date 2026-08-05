@@ -1,0 +1,25 @@
+[package]
+name = "poise-core"
+version.workspace = true
+publish.workspace = true
+description = "Runtime-independent load-balancing policy primitives"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "../../README.md"
+keywords = ["load-balancing", "distributed-systems", "networking"]
+categories = ["algorithms", "network-programming"]
+
+[dependencies]
+rand = "0.10.2"
+
+[dev-dependencies]
+proptest = { version = "=1.11.0", default-features = false, features = ["std"] }
+
+[target.'cfg(loom)'.dependencies]
+loom = "=0.7.2"
+
+[lints]
+workspace = true

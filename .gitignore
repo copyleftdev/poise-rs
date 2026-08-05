@@ -1,0 +1,7 @@
+/target/
+/mutants.out*/
+/fuzz/target/
+/fuzz/artifacts/
+/.agents/
+/.codex/
+/.impeccable.md

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "kind": "recorded",
+    "label": "Recorded local baseline",
+    "generatedAt": "2026-08-04T19:00:00-07:00",
+    "revision": "source snapshot",
+    "sourceUrl": ""
+  },
+  "project": {
+    "repository": "",
+    "docs": "../docs/architecture.md"
+  },
+  "verification": {
+    "status": "passed",
+    "ordinary": {
+      "value": 240,
+      "detail": "authored test entry points",
+      "status": "passed"
+    },
+    "property": {
+      "value": 3584,
+      "laws": 14,
+      "casesPerLaw": 256,
+      "status": "passed"
+    },
+    "mutation": {
+      "sites": 642,
+      "caught": 497,
+      "missed": 0,
+      "timeout": 23,
+      "unviable": 122,
+      "status": "passed"
+    },
+    "loom": {
+      "value": 6,
+      "status": "passed"
+    },
+    "msrv": {
+      "value": "1.85",
+      "status": "passed"
+    }
+  }
+}

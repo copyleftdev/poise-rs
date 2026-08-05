@@ -1,0 +1,29 @@
+[package]
+name = "poise-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = { version = "=0.4.13", features = ["arbitrary-derive"] }
+poise-core = { path = "../crates/poise-core" }
+
+[[bin]]
+name = "policy_state_machine"
+path = "fuzz_targets/policy_state_machine.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "topology_state_machine"
+path = "fuzz_targets/topology_state_machine.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
+members = ["."]

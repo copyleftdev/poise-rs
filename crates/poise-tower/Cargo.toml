@@ -1,0 +1,29 @@
+[package]
+name = "poise-tower"
+version.workspace = true
+publish.workspace = true
+description = "Readiness-correct Tower dispatch for Poise load balancing"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "../../README.md"
+keywords = ["load-balancing", "tower", "service", "networking"]
+categories = ["network-programming", "asynchronous"]
+
+[features]
+default = []
+discovery = ["dep:poise-discovery"]
+
+[dependencies]
+pin-project-lite = "0.2.17"
+poise-core.workspace = true
+poise-discovery = { workspace = true, optional = true }
+tower = { version = "0.5.3", default-features = false }
+
+[dev-dependencies]
+tower = { version = "0.5.3", default-features = false, features = ["util"] }
+
+[lints]
+workspace = true

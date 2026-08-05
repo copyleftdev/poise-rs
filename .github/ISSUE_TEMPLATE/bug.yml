@@ -1,0 +1,55 @@
+name: Bug report
+description: Report reproducible incorrect behavior or a violated contract
+title: "bug: "
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: Do not report vulnerabilities here. Use private vulnerability reporting from the Security tab.
+  - type: dropdown
+    id: crate
+    attributes:
+      label: Affected crate
+      options:
+        - poise-core
+        - poise-discovery
+        - poise-health
+        - poise-tower
+        - poise-tokio
+        - poise-observe
+        - workspace / release tooling
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or revision
+      placeholder: 0.1.0 or commit SHA
+    validations:
+      required: true
+  - type: input
+    id: rust
+    attributes:
+      label: Rust version and target
+      placeholder: rustc 1.85.0, x86_64-unknown-linux-gnu
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Expected contract
+      description: What behavior or invariant should hold?
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: Include the smallest reproducer, seed, topology, and feature set possible.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Logs, traces, allocation or timing information, and attempted mitigations.

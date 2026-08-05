@@ -1,0 +1,2 @@
+# Seeds for minimized failures found by property_topology.rs.
+# This file is intentionally committed so failures are replayed in every environment.

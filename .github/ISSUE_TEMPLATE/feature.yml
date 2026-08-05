@@ -1,0 +1,33 @@
+name: Design proposal
+description: Propose a policy, integration, or behavioral contract
+title: "proposal: "
+labels: [proposal, needs-design]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the routing or integration problem independently of a preferred implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Proposed contract
+      description: Define inputs, outputs, failure states, determinism, and fallback behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include composition with existing primitives and relevant prior art.
+    validations:
+      required: true
+  - type: textarea
+    id: proof
+    attributes:
+      label: Verification and operational impact
+      description: Cover properties, models, benchmarks, allocation, cardinality, and compatibility.
+    validations:
+      required: true

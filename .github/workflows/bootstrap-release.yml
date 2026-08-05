@@ -1,0 +1,43 @@
+name: Bootstrap crates.io publication
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type publish-poise-0.1.0 after reviewing docs/releasing.md
+        required: true
+        type: string
+
+concurrency:
+  group: bootstrap-crates-io
+  cancel-in-progress: false
+
+jobs:
+  publish-first-versions:
+    name: First dependency-ordered publication
+    if: inputs.confirmation == 'publish-poise-0.1.0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: crates-io-bootstrap
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Re-run release gates
+        run: |
+          node scripts/check-release-metadata.mjs --publishable
+          cargo test --locked --workspace --all-features
+          scripts/package-workspace.sh --root-only
+      - name: Publish first versions with a scoped bootstrap token
+        uses: release-plz/action@v0.5
+        with:
+          command: release
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,28 @@
+# Keep local and CI campaigns comparable. Individual crates are selected by
+# the invoking command so this policy can grow with the workspace.
+test_workspace = false
+timeout_multiplier = 8.0
+minimum_test_timeout = 20
+build_timeout_multiplier = 4.0
+
+# Equivalent mutations: these defaults are intentionally the same values as
+# their `Default` implementations, and the arithmetic rewrites preserve all
+# reachable values. `shrink_to_fit` is only a non-binding allocator request.
+exclude_re = [
+    "replace Candidate::weight -> Weight with Default::default\\(\\)",
+    "replace Candidate::status -> Status with Default::default\\(\\)",
+    "replace LocalityCandidate::locality_weight -> Weight with Default::default\\(\\)",
+    "replace % with \\+ in <impl Policy<C> for LeastLoaded>::pick",
+    "replace .*::shrink_to_fit with \\(\\)",
+    "replace PeakEwmaGuard::cancel with \\(\\)",
+    # Dropping the outer guard still drops its in-flight field, so deleting
+    # this destructor preserves the only observable cancellation behavior.
+    "replace <impl Drop for PeakEwmaGuard>::drop with \\(\\)",
+    # `raw_availability < panic_threshold` already implies this unsigned
+    # threshold is nonzero; the extra comparison documents intent.
+    "replace > with >= in PriorityWeightedRandom<R>::select_scope",
+    # Once cumulative group traffic reaches one million units, later groups
+    # are outside the sampled ticket range. Changing this bookkeeping only
+    # assigns unreachable traffic to those later groups.
+    "replace -= with \\+= in PriorityWeightedRandom<R>::select_scope",
+]

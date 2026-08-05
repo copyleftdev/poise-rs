@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en" data-state="loading">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#111612">
+    <meta name="description" content="Explore Poise, a family of composable and rigorously verified load-balancing primitives for Rust.">
+    <meta property="og:title" content="Poise — Load balancing, made observable">
+    <meta property="og:description" content="An interactive atlas of Poise policies and the invariants that hold them together.">
+    <title>Poise — Invariant Orrery</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,500;0,700;1,400&amp;family=Geologica:CRSV,SHRP,slnt,wght@0,0,-12,300;0,50,0,430;0,100,0,650;1,50,0,430&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#capabilities">Skip the visualization</a>
+
+    <header class="masthead">
+      <a class="wordmark" href="#top" aria-label="Poise home">
+        <svg aria-hidden="true" viewBox="0 0 32 32">
+          <circle cx="16" cy="16" r="4"></circle>
+          <path d="M3 16h9m8 0h9M16 3v9m0 8v9"></path>
+          <path d="M7.5 7.5l6.2 6.2m4.6 4.6 6.2 6.2m0-17-6.2 6.2m-4.6 4.6-6.2 6.2"></path>
+        </svg>
+        <span>POISE</span>
+      </a>
+      <div class="masthead-status" aria-live="polite">
+        <span class="status-pulse" aria-hidden="true"></span>
+        <span id="run-state">Loading verification record</span>
+      </div>
+      <nav aria-label="Primary navigation">
+        <a href="#capabilities">Capabilities</a>
+        <a href="#verification">Proof</a>
+        <a data-repo-link href="https://github.com/" rel="noreferrer">Source <span aria-hidden="true">↗</span></a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="orrery" aria-labelledby="hero-title">
+        <canvas id="field" aria-hidden="true"></canvas>
+        <div class="field-fallback" id="field-fallback">
+          <svg aria-hidden="true" viewBox="0 0 640 640">
+            <circle cx="320" cy="320" r="220"></circle>
+            <circle cx="320" cy="320" r="138"></circle>
+            <circle cx="320" cy="320" r="18"></circle>
+            <path d="M100 320h440M320 100v440"></path>
+          </svg>
+        </div>
+
+        <div class="hero-copy">
+          <p class="eyebrow"><span>01</span> The invariant orrery</p>
+          <h1 id="hero-title">Load balancing,<br><em>made observable.</em></h1>
+          <p class="hero-deck">Composable Rust primitives for selection, affinity, health, discovery, and dispatch—each held in orbit by explicit behavioral laws.</p>
+          <div class="hero-actions">
+            <a class="primary-action" href="#capabilities">Explore the system <span aria-hidden="true">↓</span></a>
+            <button class="text-action" id="replay-button" type="button">
+              <span class="play-symbol" aria-hidden="true">Ⅱ</span>
+              <span class="play-label">Pause replay</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="instrument" aria-label="Verification replay controls">
+          <div class="instrument-readout">
+            <span id="event-index">01 / 05</span>
+            <strong id="event-title">Property laws</strong>
+            <span id="event-detail">3,584 generated cases</span>
+          </div>
+          <div class="timeline" role="group" aria-label="Choose verification layer">
+            <button data-event="0" class="is-active" aria-label="Show ordinary tests"><span></span></button>
+            <button data-event="1" aria-label="Show property tests"><span></span></button>
+            <button data-event="2" aria-label="Show mutation tests"><span></span></button>
+            <button data-event="3" aria-label="Show Loom models"><span></span></button>
+            <button data-event="4" aria-label="Show MSRV verification"><span></span></button>
+          </div>
+          <p class="instrument-key">← → step · space pause · 1–7 focus</p>
+        </div>
+
+        <div class="field-label" id="field-label" aria-hidden="true">
+          <span>Selected field</span>
+          <strong>All capabilities</strong>
+        </div>
+
+        <div class="render-budget" aria-label="Visualization resource budget">
+          <span>Bounded renderer</span>
+          <strong id="render-count">0 particles · 1.5× DPR max</strong>
+        </div>
+      </section>
+
+      <section class="premise" aria-label="Design premise">
+        <p class="section-number">02 / The premise</p>
+        <blockquote>Selection is only the visible moment. <em>Poise makes every force around it explicit.</em></blockquote>
+        <p>Membership. Eligibility. Choice. Dispatch. Feedback. Each concern has a boundary you can inspect, compose, and replace.</p>
+      </section>
+
+      <section class="atlas" id="capabilities" aria-labelledby="atlas-title">
+        <header class="section-heading">
+          <p class="section-number">03 / Capability atlas</p>
+          <h2 id="atlas-title">A policy system,<br>not a single algorithm.</h2>
+          <p>Select a family to reorganize the orrery. The same symbolic language describes the primitive, its state, and the proof currently exercising it.</p>
+        </header>
+        <div class="atlas-list" id="atlas-list">
+          <button class="capability is-active" data-capability="all" type="button">
+            <span class="capability-index">00</span>
+            <span class="capability-mark mark-all" aria-hidden="true"><i></i></span>
+            <span><strong>Whole system</strong><small>Every force in relation</small></span>
+            <span class="capability-count">7 fields</span>
+          </button>
+          <button class="capability" data-capability="selection" type="button">
+            <span class="capability-index">01</span>
+            <span class="capability-mark mark-selection" aria-hidden="true"><i></i></span>
+            <span><strong>Selection</strong><small>Deterministic and stochastic choice</small></span>
+            <span class="capability-count">8 policies</span>
+          </button>
+          <button class="capability" data-capability="affinity" type="button">
+            <span class="capability-index">02</span>
+            <span class="capability-mark mark-affinity" aria-hidden="true"><i></i></span>
+            <span><strong>Affinity</strong><small>Stable placement under churn</small></span>
+            <span class="capability-count">4 policies</span>
+          </button>
+          <button class="capability" data-capability="topology" type="button">
+            <span class="capability-index">03</span>
+            <span class="capability-mark mark-topology" aria-hidden="true"><i></i></span>
+            <span><strong>Topology</strong><small>Priority, locality, spillover</small></span>
+            <span class="capability-count">2 planes</span>
+          </button>
+          <button class="capability" data-capability="health" type="button">
+            <span class="capability-index">04</span>
+            <span class="capability-mark mark-health" aria-hidden="true"><i></i></span>
+            <span><strong>Health + load</strong><small>Circuits, outliers, in-flight, EWMA</small></span>
+            <span class="capability-count">6 signals</span>
+          </button>
+          <button class="capability" data-capability="discovery" type="button">
+            <span class="capability-index">05</span>
+            <span class="capability-mark mark-discovery" aria-hidden="true"><i></i></span>
+            <span><strong>Discovery</strong><small>Atomic snapshots and graceful drain</small></span>
+            <span class="capability-count">3 stages</span>
+          </button>
+          <button class="capability" data-capability="observe" type="button">
+            <span class="capability-index">06</span>
+            <span class="capability-mark mark-observe" aria-hidden="true"><i></i></span>
+            <span><strong>Observability</strong><small>Bounded metrics and tracing</small></span>
+            <span class="capability-count">2 surfaces</span>
+          </button>
+          <button class="capability" data-capability="runtime" type="button">
+            <span class="capability-index">07</span>
+            <span class="capability-mark mark-runtime" aria-hidden="true"><i></i></span>
+            <span><strong>Runtime bridges</strong><small>Tower and optional Tokio integration</small></span>
+            <span class="capability-count">2 crates</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="verification" id="verification" aria-labelledby="verification-title">
+        <header class="section-heading verification-heading">
+          <p class="section-number">04 / Verification ledger</p>
+          <h2 id="verification-title">Proof is part<br>of the interface.</h2>
+          <div class="provenance">
+            <span class="provenance-mark" aria-hidden="true"></span>
+            <p><strong><a id="provenance-title">Recorded local baseline</a></strong><br><span id="provenance-detail">Awaiting verification data</span></p>
+          </div>
+        </header>
+
+        <div class="ledger" id="ledger">
+          <article data-proof="ordinary">
+            <div class="proof-symbol symbol-ordinary" aria-hidden="true"><i></i><i></i><i></i></div>
+            <p class="proof-index">P / 01 <span data-proof-status="ordinary">passed</span></p>
+            <h3>Ordinary tests</h3>
+            <p>Examples, edge cases, distributions, cancellation, and transactional failure behavior across the workspace.</p>
+            <strong class="proof-value" data-value="ordinary">240</strong>
+            <span class="proof-unit">authored test entry points</span>
+          </article>
+          <article data-proof="property">
+            <div class="proof-symbol symbol-property" aria-hidden="true"><i></i></div>
+            <p class="proof-index">P / 02 <span data-proof-status="property">passed</span></p>
+            <h3>Property laws</h3>
+            <p>Generated inputs test selection safety, minimal disruption, exact replay, conservation, and topology metadata.</p>
+            <strong class="proof-value" data-value="property">3,584</strong>
+            <span class="proof-unit">generated cases per run</span>
+          </article>
+          <article data-proof="mutation">
+            <div class="proof-symbol symbol-mutation" aria-hidden="true"><i></i></div>
+            <p class="proof-index">P / 03 <span data-proof-status="mutation">passed</span></p>
+            <h3>Mutation gate</h3>
+            <p>The suite must reject every terminating, viable behavioral mutation. Equivalent rewrites are reviewed, never hidden.</p>
+            <strong class="proof-value" data-value="mutation">0</strong>
+            <span class="proof-unit">viable survivors / 642 sites</span>
+          </article>
+          <article data-proof="loom">
+            <div class="proof-symbol symbol-loom" aria-hidden="true"><i></i><i></i><i></i></div>
+            <p class="proof-index">P / 04 <span data-proof-status="loom">passed</span></p>
+            <h3>Loom models</h3>
+            <p>Exhaustive scheduler exploration checks in-flight accounting and health-state transitions under hostile interleavings.</p>
+            <strong class="proof-value" data-value="loom">6</strong>
+            <span class="proof-unit">scheduler models</span>
+          </article>
+          <article data-proof="msrv">
+            <div class="proof-symbol symbol-msrv" aria-hidden="true"><i></i><i></i><i></i></div>
+            <p class="proof-index">P / 05 <span data-proof-status="msrv">passed</span></p>
+            <h3>Compiler floor</h3>
+            <p>The dependency graph and public surface are held to the declared Rust 1.85 minimum supported version.</p>
+            <strong class="proof-value" data-value="msrv">1.85</strong>
+            <span class="proof-unit">declared Rust MSRV</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="architecture" aria-labelledby="architecture-title">
+        <p class="section-number">05 / Composition path</p>
+        <h2 id="architecture-title">The hot path stays small.</h2>
+        <ol>
+          <li><span>01</span><strong>Membership</strong><small>versioned snapshots</small></li>
+          <li><span>02</span><strong>Eligibility</strong><small>health + topology</small></li>
+          <li><span>03</span><strong>Selection</strong><small>pure policy decision</small></li>
+          <li><span>04</span><strong>Dispatch</strong><small>readiness retained</small></li>
+          <li><span>05</span><strong>Feedback</strong><small>bounded signals</small></li>
+        </ol>
+        <pre aria-label="Rust example"><code><span>use</span> poise_core::{Backend, Policy, policy::RoundRobin};
+
+<span>let</span> backends = [Backend::new(<b>"a"</b>), Backend::new(<b>"b"</b>)];
+<span>let mut</span> policy = RoundRobin::new();
+
+<span>let</span> selected = policy.pick(&amp;backends, &amp;())?;</code></pre>
+      </section>
+
+      <section class="closing" aria-labelledby="closing-title">
+        <p class="section-number">06 / Begin with the contracts</p>
+        <h2 id="closing-title">Make the easy policies easy.<br><em>Keep the hard ones possible.</em></h2>
+        <div>
+          <a class="primary-action" data-repo-link href="https://github.com/" rel="noreferrer">Read the source <span aria-hidden="true">↗</span></a>
+          <a class="text-action anchor" data-docs-link href="../docs/architecture.md">Architecture notes <span aria-hidden="true">→</span></a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <a class="wordmark" href="#top">POISE</a>
+      <p>Composable load-balancing primitives for Rust.</p>
+      <p>Visualization is bounded by design. No fuzzers run in this page.</p>
+    </footer>
+
+    <div class="sr-only" id="live-description" aria-live="polite"></div>
+    <noscript><div class="noscript">The interactive replay needs JavaScript. The complete capability atlas and verification ledger remain available below it.</div></noscript>
+  </body>
+</html>

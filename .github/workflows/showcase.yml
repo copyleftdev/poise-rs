@@ -1,0 +1,112 @@
+name: Verify and publish showcase
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install declared compiler floor
+        run: rustup toolchain install 1.85.0 --profile minimal
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Ordinary workspace suite
+        id: ordinary
+        continue-on-error: true
+        run: cargo test --workspace --all-features
+
+      - name: Generated property laws
+        id: property
+        continue-on-error: true
+        env:
+          PROPTEST_RNG_SEED: "1592614637"
+        run: |
+          cargo test -p poise-core --test property_selection
+          cargo test -p poise-core --test property_affinity
+          cargo test -p poise-core --test property_topology
+
+      - name: Exhaustive Loom scheduler models
+        id: loom
+        continue-on-error: true
+        run: scripts/model-check.sh
+
+      - name: Rust 1.85 compiler floor
+        id: msrv
+        continue-on-error: true
+        run: rustup run 1.85.0 cargo test --workspace --all-features
+
+      - name: Install pinned mutation runner
+        run: cargo install cargo-mutants --version 27.0.0 --locked
+
+      - name: Complete mutation gate
+        id: mutation
+        continue-on-error: true
+        timeout-minutes: 40
+        run: scripts/mutants-core.sh --jobs 1
+
+      - name: Export honest showcase record
+        if: always()
+        env:
+          POISE_ORDINARY_OUTCOME: ${{ steps.ordinary.outcome }}
+          POISE_PROPERTY_OUTCOME: ${{ steps.property.outcome }}
+          POISE_LOOM_OUTCOME: ${{ steps.loom.outcome }}
+          POISE_MSRV_OUTCOME: ${{ steps.msrv.outcome }}
+          POISE_MUTATION_OUTCOME: ${{ steps.mutation.outcome }}
+        run: node scripts/write-showcase-data.mjs
+
+      - name: Configure Pages
+        if: always()
+        uses: actions/configure-pages@v5
+
+      - name: Upload showcase
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Preserve verification gate result
+        if: always()
+        env:
+          ORDINARY: ${{ steps.ordinary.outcome }}
+          PROPERTY: ${{ steps.property.outcome }}
+          LOOM: ${{ steps.loom.outcome }}
+          MSRV: ${{ steps.msrv.outcome }}
+          MUTATION: ${{ steps.mutation.outcome }}
+        run: |
+          test "$ORDINARY" = success
+          test "$PROPERTY" = success
+          test "$LOOM" = success
+          test "$MSRV" = success
+          test "$MUTATION" = success
+
+  deploy:
+    if: always()
+    needs: verify
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish passing or failing evidence
+        id: deployment
+        uses: actions/deploy-pages@v4

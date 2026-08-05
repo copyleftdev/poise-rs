@@ -1,0 +1,29 @@
+[package]
+name = "poise-observe"
+version.workspace = true
+publish.workspace = true
+description = "Bounded-cardinality metrics and tracing for Poise load balancing"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "README.md"
+keywords = ["load-balancing", "metrics", "observability", "tracing"]
+categories = ["development-tools::debugging", "network-programming"]
+
+[features]
+default = []
+tower = ["dep:poise-tower"]
+tracing = ["dep:tracing"]
+
+[dependencies]
+poise-core.workspace = true
+poise-tower = { workspace = true, optional = true }
+tracing = { version = "0.1.44", default-features = false, features = ["std"], optional = true }
+
+[dev-dependencies]
+poise-core.workspace = true
+
+[lints]
+workspace = true

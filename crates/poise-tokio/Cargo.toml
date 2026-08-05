@@ -1,0 +1,38 @@
+[package]
+name = "poise-tokio"
+description = "Tokio integration for the Poise load-balancing primitives"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "README.md"
+keywords = ["load-balancing", "health-check", "tokio"]
+categories = ["asynchronous", "network-programming"]
+
+[features]
+default = ["discovery", "health"]
+discovery = ["dep:poise-discovery"]
+health = ["dep:poise-health", "dep:tokio"]
+
+[dependencies]
+poise-discovery = { workspace = true, optional = true }
+poise-health = { workspace = true, optional = true }
+tokio = { version = "1.53.1", default-features = false, features = ["time"], optional = true }
+
+[dev-dependencies]
+poise-core.workspace = true
+poise-discovery.workspace = true
+poise-health.workspace = true
+tokio = { version = "1.53.1", default-features = false, features = [
+    "macros",
+    "rt",
+    "sync",
+    "test-util",
+    "time",
+] }
+
+[lints]
+workspace = true
