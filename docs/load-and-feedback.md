@@ -43,8 +43,8 @@ budget. Never assume a bounded-load policy replaces atomic admission.
 high latency raises the score immediately; without new observations, the
 latency component decays toward its configured floor.
 
-The tracker uses a caller-supplied monotonic clock at its core boundary. This
-keeps simulated time, test time, and runtime time coherent.
+The tracker uses Rust's monotonic `Instant` internally. The current API does not
+provide caller-supplied clock injection.
 
 Configuration rejects zero decay or default-latency parameters. Completion
 records latency and releases concurrency; cancellation releases concurrency

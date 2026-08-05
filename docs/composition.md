@@ -34,8 +34,7 @@ origins:
 - active probe classification;
 - passive circuit permission;
 - group-relative outlier decision;
-- topology scope;
-- atomic capacity admission.
+- topology scope.
 
 `HealthChecked` composes health with an existing candidate. It does not mutate
 the underlying administrative state. Draining remains draining even if health
@@ -48,6 +47,11 @@ returns an index and, for advanced families, structured decision metadata.
 
 Selection must not consume a Tower readiness permit, increment a load tracker,
 or start network work. Those effects belong to dispatch.
+
+Selection may observe capacity when a policy's contract calls for it. After a
+candidate is selected, the dispatcher must acquire any atomic capacity guard;
+that admission is the race-safe check. If acquisition loses a race, reselect or
+return overload according to the application's bounded retry budget.
 
 ### 4. Retain readiness through dispatch
 

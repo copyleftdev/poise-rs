@@ -66,7 +66,7 @@ without allocating an intermediate list.
 | --- | --- |
 | Pick time | O(n) |
 | Extra memory | O(1) |
-| Draws | One bounded draw per eligible candidate after the first |
+| Draws | One bounded draw per eligible candidate, including the first |
 | Reproducibility | `Random::seeded` or caller RNG |
 
 Reservoir sampling means sparse eligibility does not require a preliminary
@@ -127,12 +127,14 @@ identity maps can advance. Decide deliberately how instances are shared:
 Poise does not hide synchronization inside the `Policy` trait. The application
 chooses the concurrency boundary appropriate for its request path.
 
-## Custom candidates and policies
+## Custom candidates and the policy boundary
 
 Implement `Candidate` for a borrowed snapshot view when copying into
-`Backend` would obscure ownership. Implement `Policy` when application
-metadata changes selection semantics.
+`Backend` would obscure ownership.
 
-A custom policy must treat its returned index as untrusted at the adapter
-boundary. `poise-tower` validates the index and reports an explicit selection
-error instead of indexing blindly.
+Downstream policy implementation is not currently a supported extension point:
+although `Policy` is public, constructing a successful `Selection` is reserved
+to `poise-core`. Use the in-repository policies and their public context and
+candidate extension traits. A future checked policy extension must preserve the
+same eligible, in-bounds result contract before downstream implementations are
+documented as supported.

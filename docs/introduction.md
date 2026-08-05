@@ -22,7 +22,8 @@ replacing an opaque all-in-one balancer.
 
 Poise makes narrow guarantees that compose:
 
-- a successful selection always identifies an eligible, in-bounds candidate;
+- a successful selection from a supported in-repository policy always
+  identifies an eligible, in-bounds candidate;
 - empty membership and non-empty but ineligible membership remain distinct;
 - seeded stochastic policies replay exactly;
 - keyed policies use documented deterministic hashing;
@@ -54,7 +55,7 @@ If you are evaluating the crate, begin with [Choose a policy](choosing-a-policy.
 and [Compose the system](composition.md). They explain the decision surface and
 where each crate belongs.
 
-If you are integrating Poise, read [Failure semantics](failure-semantics.md),
+If you are integrating Poise, read [Failure semantics](failure-semantics.md#selection-failures),
 [Tower dispatch](tower.md), and [Operating Poise](operations.md) before adding
 retries or health automation.
 
