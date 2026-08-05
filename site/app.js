@@ -7,7 +7,7 @@ const FALLBACK_RECORD = {
     revision: "source snapshot",
     sourceUrl: "",
   },
-  project: { repository: "", docs: "../docs/architecture.md" },
+  project: { repository: "" },
   verification: {
     status: "passed",
     ordinary: { value: 240, detail: "authored test entry points", status: "passed" },
@@ -127,8 +127,6 @@ function applyRecord(nextRecord) {
   if (repository) {
     document.querySelectorAll("[data-repo-link]").forEach((link) => { link.href = repository; });
   }
-  const docs = record.project?.docs;
-  if (docs) document.querySelector("[data-docs-link]").href = docs;
   updateEvent(false);
 }
 

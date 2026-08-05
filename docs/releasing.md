@@ -59,12 +59,14 @@ afterward.
 Protect `main` with required pull requests and these CI jobs:
 
 - Format, lint, and docs
+- Documentation book
 - Test / Rust stable
 - Test / Rust 1.85.0
 - Deterministic property laws
 - Exhaustive scheduler models
 - Package archives
 - Licenses, advisories, bans, and sources
+- RustSec advisory database
 
 Allow GitHub Actions to create pull requests so Release-plz can maintain its
 release PR. Keep environment approval on `crates-io` and

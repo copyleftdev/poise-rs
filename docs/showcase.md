@@ -35,6 +35,11 @@ property, Loom, MSRV, or mutation verification failed. The deployment job runs
 even then so the broken proof remains visible in the orrery instead of leaving a
 stale green page.
 
+The same Pages artifact includes this mdBook at `site/book/`. The Orrery and
+book share the palette and typography in `site/styles/tokens.css`; the book adds
+only its document-specific theme. A single revision therefore owns the visual
+explanation, the verification record, and the engineering guidance.
+
 To inspect a generated record without replacing the checked-in baseline:
 
 ```console

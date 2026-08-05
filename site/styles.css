@@ -11,22 +11,7 @@
 
 @layer base {
   :root {
-    --ink: oklch(13% 0.014 145);
-    --ink-raised: oklch(17% 0.016 145);
-    --ink-soft: oklch(22% 0.018 145);
-    --bone: oklch(93% 0.018 88);
-    --bone-soft: oklch(79% 0.023 88);
-    --bone-dim: oklch(62% 0.025 88);
-    --line: oklch(36% 0.025 140 / 0.56);
-    --line-bright: oklch(63% 0.046 120 / 0.62);
-    --sulfur: oklch(84% 0.175 112);
-    --sulfur-soft: oklch(84% 0.12 112 / 0.22);
-    --oxide: oklch(69% 0.17 38);
-    --mineral: oklch(72% 0.09 185);
-    --display: "Geologica", "Arial Narrow", sans-serif;
-    --body: "Atkinson Hyperlegible Next", "Segoe UI", sans-serif;
-    --page: min(92vw, 1440px);
-    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    color-scheme: dark;
   }
 
   html { background: var(--ink); color: var(--bone); }

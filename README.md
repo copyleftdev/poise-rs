@@ -5,6 +5,7 @@
 [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-3b6e54.svg)](https://doc.rust-lang.org/stable/releases.html#version-1850-2025-02-20)
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-dbe51d.svg)](Cargo.toml)
 [![verification](https://img.shields.io/badge/verification-unit%20%7C%20property%20%7C%20mutation%20%7C%20loom-dbe51d.svg)](docs/testing.md)
+[![engineering book](https://img.shields.io/badge/docs-engineering%20book-6faead.svg)](https://copyleftdev.github.io/poise-rs/book/)
 [![license](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-3b6e54.svg)](#license)
 
 Composable, runtime-independent load-balancing primitives for Rust.
@@ -20,6 +21,18 @@ adapter.
 > crates remain unpublished until the protected first-release workflow claims
 > their crates.io names. Use Git dependencies only if pre-release API change is
 > acceptable for your application.
+
+## Engineering book
+
+The [Poise engineering book](https://copyleftdev.github.io/poise-rs/book/) is
+the primary guide to policy choice, composition, failure semantics, operations,
+performance, security, and verification. It is generated from the Markdown in
+`docs/`, shares the Invariant Orrery's visual language, and retains mdBook's
+search, keyboard navigation, deep links, print view, and theme controls.
+
+Start with [Getting started](docs/getting-started.md) for a first integration,
+[Choosing a policy](docs/choosing-a-policy.md) for a production decision, or
+[Composition](docs/composition.md) for the complete control loop.
 
 ## Why Poise exists
 
@@ -193,7 +206,9 @@ reduced-motion fallbacks.
 
 Its [data contract](docs/showcase.md) distinguishes live, recorded, stale,
 failed, and unavailable evidence. GitHub Pages publishes failing runs as broken
-proofs while leaving the associated Actions workflow red.
+proofs while leaving the associated Actions workflow red. The same Pages
+artifact serves the [engineering book](https://copyleftdev.github.io/poise-rs/book/),
+so the visualization and reference material always describe one revision.
 
 ## Performance stance
 

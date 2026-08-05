@@ -1,0 +1,43 @@
+[book]
+title = "Poise"
+authors = ["Poise contributors"]
+description = "Expert guidance for composing, operating, and verifying Poise load-balancing systems."
+language = "en"
+src = "docs"
+
+[build]
+build-dir = "site/book"
+create-missing = false
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+smart-punctuation = true
+mathjax-support = false
+definition-lists = true
+admonitions = true
+additional-css = [
+  "site/styles/tokens.css",
+  "book-theme/poise.css",
+]
+additional-js = ["book-theme/poise.js"]
+git-repository-url = "https://github.com/copyleftdev/poise-rs"
+edit-url-template = "https://github.com/copyleftdev/poise-rs/edit/main/{path}"
+site-url = "/poise-rs/book/"
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.search]
+enable = true
+limit-results = 30
+use-boolean-and = true
+boost-title = 3
+boost-hierarchy = 2
+boost-paragraph = 1
+expand = true
+heading-split-level = 3
+
+[output.html.print]
+enable = true

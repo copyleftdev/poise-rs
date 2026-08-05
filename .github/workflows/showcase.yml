@@ -20,6 +20,8 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 55
+    outputs:
+      book_outcome: ${{ steps.book.outcome }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -64,6 +66,13 @@ jobs:
         timeout-minutes: 40
         run: scripts/mutants-core.sh --jobs 1
 
+      - name: Install pinned mdBook
+        run: cargo install mdbook --version 0.5.2 --locked
+
+      - name: Build engineering book
+        id: book
+        run: scripts/build-book.sh
+
       - name: Export honest showcase record
         if: always()
         env:
@@ -75,11 +84,11 @@ jobs:
         run: node scripts/write-showcase-data.mjs
 
       - name: Configure Pages
-        if: always()
+        if: always() && steps.book.outcome == 'success'
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       - name: Upload showcase
-        if: always()
+        if: always() && steps.book.outcome == 'success'
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site
@@ -100,7 +109,7 @@ jobs:
           test "$MUTATION" = success
 
   deploy:
-    if: always()
+    if: always() && needs.verify.outputs.book_outcome == 'success'
     needs: verify
     environment:
       name: github-pages
