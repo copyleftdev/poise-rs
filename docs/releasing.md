@@ -4,18 +4,20 @@ Poise uses one version across six crates and publishes them in dependency order.
 Normal releases are pull-request driven; direct `cargo publish` from a maintainer
 laptop is an emergency procedure, not the default.
 
-## Current hard gates
+## Current release state
 
-The repository, license, and Cargo metadata are finalized. The first crates.io
-publication remains blocked until all of these are true:
+The six crate names were claimed with version `0.1.0` on August 5, 2026, after
+the repository's CI, package, Loom, property, and mutation gates passed. New
+versions remain gated on all of the following:
 
-1. All six crate names are checked immediately before publication.
-2. GitHub Actions, protected environments, required reviews, and private
-   vulnerability reporting are enabled.
-3. The complete CI, MSRV, Loom, package, and mutation gates are green on the
+1. GitHub Actions, protected environments, required reviews, and private
+   vulnerability reporting remain enabled.
+2. The complete CI, MSRV, Loom, package, and mutation gates are green on the
    exact release commit.
-4. A maintainer supplies a short-lived, least-privilege bootstrap token and
-   enters the workflow's exact confirmation phrase.
+3. The release PR's SemVer decisions, archive contents, changelog, and API
+   compatibility report receive maintainer review.
+4. Each package publishes from the protected `crates-io` environment through a
+   crates.io trusted publisher.
 
 `node scripts/check-release-metadata.mjs --publishable` enforces the mechanical
 portion of this list.
@@ -26,7 +28,7 @@ The shared package identity is defined once:
 
 ```toml
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.85"
 publish = true
@@ -69,29 +71,29 @@ Protect `main` with required pull requests and these CI jobs:
 - RustSec advisory database
 
 Allow GitHub Actions to create pull requests so Release-plz can maintain its
-release PR. Keep environment approval on `crates-io` and
-`crates-io-bootstrap`.
+release PR. Keep environment approval on `crates-io`; the bootstrap environment
+is retired after its token is deleted.
 
-## First crates.io publication
+## Completed crates.io bootstrap
 
-Trusted publishing cannot create a crate name for its first release. Create a
-short-lived crates.io token scoped to `publish-new` and `publish-update`, store
-it as `CARGO_REGISTRY_TOKEN` only in the protected `crates-io-bootstrap`
-environment, and run **Bootstrap crates.io publication** manually.
+Trusted publishing could not create the crate names for their first releases.
+The initial `0.1.0` versions were therefore published in dependency order with
+a short-lived crates.io token scoped to `publish-new` and `publish-update`.
 
-The workflow requires the exact confirmation text `publish-poise-0.1.0`, reruns
-the gates, fully verifies the root `poise-core` archive, and delegates sequential
-packaging, publication order, and tags to Release-plz. Dependent archives cannot
-be verified against crates.io until their internal dependencies have completed
-their first registry publication.
+The bootstrap-only GitHub workflow is not a normal release mechanism and must
+not be rerun. Dependent archives could not be verified against crates.io until
+their internal dependencies completed their first registry publication, so the
+bootstrap proceeded from `poise-core` through the dependency graph and verified
+each exact registry version before continuing.
 
-After all six crates exist:
+After bootstrap, maintainers must complete this one-time handoff:
 
 1. Configure each crate's crates.io trusted publisher for this repository,
    `.github/workflows/release.yml`, and the `crates-io` environment.
 2. Delete `CARGO_REGISTRY_TOKEN` from GitHub.
-3. Set the repository variable `RELEASES_ENABLED=true`.
-4. Run the regular **Release** workflow manually once and confirm it is a no-op.
+3. Delete or lock the retired `crates-io-bootstrap` environment.
+4. Set the repository variable `RELEASES_ENABLED=true`.
+5. Run the regular **Release** workflow manually once and confirm it is a no-op.
 
 Regular releases then use GitHub OIDC and no long-lived registry secret.
 

@@ -6,6 +6,7 @@
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-dbe51d.svg)](Cargo.toml)
 [![verification](https://img.shields.io/badge/verification-unit%20%7C%20property%20%7C%20mutation%20%7C%20loom-dbe51d.svg)](docs/testing.md)
 [![engineering book](https://img.shields.io/badge/docs-engineering%20book-6faead.svg)](https://copyleftdev.github.io/poise-rs/book/)
+[![support](https://img.shields.io/badge/support-TokenTip-dbe51d.svg)](https://tokentip.to/@copyleftdev)
 [![license](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-3b6e54.svg)](#license)
 
 Composable, runtime-independent load-balancing primitives for Rust.
@@ -17,10 +18,10 @@ on the same contracts instead of hiding a second balancing system behind an
 adapter.
 
 > [!IMPORTANT]
-> Poise is pre-1.0. Its behavioral contracts are heavily tested, but the six
-> crates remain unpublished until the protected first-release workflow claims
-> their crates.io names. Use Git dependencies only if pre-release API change is
-> acceptable for your application.
+> Poise is pre-1.0. Its behavioral contracts are heavily tested, and all six
+> crates are published on crates.io. Use compatible `0.1` requirements and
+> review release notes before upgrading because pre-1.0 API changes remain
+> possible.
 
 ## Engineering book
 
@@ -64,12 +65,12 @@ and telemetry avoids endpoint-derived cardinality by default.
 
 | Crate | Responsibility | Runtime dependency |
 | --- | --- | --- |
-| `poise-core` | Candidate contracts, selection policies, affinity, topology, and load trackers | None |
-| `poise-discovery` | Atomic versioned snapshots, subscriptions, reconciliation inputs, and graceful draining | None |
-| `poise-health` | Active probes, passive circuits, rolling outcomes, and group-relative outlier detection | None |
-| `poise-tower` | Readiness-correct dispatch and optional snapshot-to-service reconciliation | Tower |
-| `poise-tokio` | Optional probe timing and asynchronous discovery waits | Tokio |
-| `poise-observe` | Fixed-cardinality counters and optional structured tracing | Optional Tower / tracing |
+| [`poise-core`](https://crates.io/crates/poise-core) | Candidate contracts, selection policies, affinity, topology, and load trackers | None |
+| [`poise-discovery`](https://crates.io/crates/poise-discovery) | Atomic versioned snapshots, subscriptions, reconciliation inputs, and graceful draining | None |
+| [`poise-health`](https://crates.io/crates/poise-health) | Active probes, passive circuits, rolling outcomes, and group-relative outlier detection | None |
+| [`poise-tower`](https://crates.io/crates/poise-tower) | Readiness-correct dispatch and optional snapshot-to-service reconciliation | Tower |
+| [`poise-tokio`](https://crates.io/crates/poise-tokio) | Optional probe timing and asynchronous discovery waits | Tokio |
+| [`poise-observe`](https://crates.io/crates/poise-observe) | Fixed-cardinality counters and optional structured tracing | Optional Tower / tracing |
 
 There is intentionally no umbrella crate. Applications depend only on the
 layers they use, and the deterministic policy core does not inherit an async
@@ -250,10 +251,9 @@ per-crate tags, and publishes in dependency order after the release PR is
 merged. A local `scripts/bump-version.mjs` command is available for an explicit
 maintainer override, and the pre-commit hook rejects partial version bumps.
 
-The first crates.io publication requires a short-lived scoped token because new
-crates cannot yet bootstrap themselves through trusted publishing. Subsequent
-releases use GitHub OIDC without a long-lived registry secret. See
-[Release engineering](docs/releasing.md).
+The first crates.io publication completed on August 5, 2026. Subsequent releases
+use GitHub OIDC without a long-lived registry secret after trusted publishers
+are configured. See [Release engineering](docs/releasing.md).
 
 ## Project status
 
@@ -267,6 +267,11 @@ See the [roadmap](docs/roadmap.md).
 
 Please report vulnerabilities privately according to [SECURITY.md](SECURITY.md).
 Do not open a public issue for a suspected vulnerability.
+
+## Support
+
+If Poise is useful to your infrastructure, you can support its continued
+engineering and maintenance through [TokenTip](https://tokentip.to/@copyleftdev).
 
 ## License
 

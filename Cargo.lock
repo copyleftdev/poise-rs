@@ -215,7 +215,7 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "poise-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "loom",
  "proptest",
@@ -224,7 +224,7 @@ dependencies = [
 
 [[package]]
 name = "poise-discovery"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "arc-swap",
  "futures-core",
@@ -233,7 +233,7 @@ dependencies = [
 
 [[package]]
 name = "poise-health"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "loom",
  "poise-core",
@@ -241,7 +241,7 @@ dependencies = [
 
 [[package]]
 name = "poise-observe"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "poise-core",
  "poise-tower",
@@ -250,7 +250,7 @@ dependencies = [
 
 [[package]]
 name = "poise-tokio"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "poise-core",
  "poise-discovery",
@@ -260,7 +260,7 @@ dependencies = [
 
 [[package]]
 name = "poise-tower"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "pin-project-lite",
  "poise-core",

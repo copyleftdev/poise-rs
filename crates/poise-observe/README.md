@@ -26,3 +26,8 @@ let selected = policy.pick(&candidates, &()).unwrap();
 assert_eq!(selected.index(), 0);
 assert_eq!(metrics.snapshot().decisions(DecisionKind::Selected), 1);
 ```
+
+## Support
+
+Support continued Poise engineering and maintenance through
+[TokenTip](https://tokentip.to/@copyleftdev).

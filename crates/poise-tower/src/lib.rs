@@ -24,6 +24,11 @@
 //! assert!(balance.poll_ready(&mut context).is_ready());
 //! let _response = balance.call(7);
 //! ```
+//!
+//! # Support
+//!
+//! Support continued Poise engineering through
+//! [TokenTip](https://tokentip.to/@copyleftdev).
 
 #![forbid(unsafe_code)]
 

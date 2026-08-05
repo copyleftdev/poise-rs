@@ -68,9 +68,8 @@ strongest applicable verification layer.
 
 Poise is pre-1.0. Its contracts are deliberately explicit and heavily tested,
 but new capabilities can still reshape APIs. All six workspace crates share one
-version and one release process. The first crates.io publication remains behind
-a protected manual bootstrap; until then, use a pinned Git revision when
-evaluating the library.
+version and one release process. Versioned releases are available on crates.io;
+review the changelog before upgrading within the pre-1.0 series.
 
 ## Documentation conventions
 
@@ -84,3 +83,8 @@ The book uses four kinds of statements:
 Examples prefer concrete failure handling over happy-path-only snippets.
 Complexity statements describe the current implementation, not an imagined
 future optimization.
+
+## Support the project
+
+If Poise is useful to your infrastructure, support continued engineering and
+maintenance through [TokenTip](https://tokentip.to/@copyleftdev).

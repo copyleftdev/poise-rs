@@ -17,6 +17,11 @@
 //! assert_eq!(backends[first.index()].id(), &"west");
 //! assert_eq!(backends[second.index()].id(), &"east");
 //! ```
+//!
+//! # Support
+//!
+//! Support continued Poise engineering through
+//! [TokenTip](https://tokentip.to/@copyleftdev).
 
 #![forbid(unsafe_code)]
 

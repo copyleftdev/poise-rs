@@ -36,3 +36,8 @@ let runner = ActiveHealthRunner::new(
 
 assert_eq!(runner.config().timeout(), Some(Duration::from_secs(2)));
 ```
+
+## Support
+
+Support continued Poise engineering and maintenance through
+[TokenTip](https://tokentip.to/@copyleftdev).

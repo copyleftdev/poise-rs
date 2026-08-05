@@ -21,6 +21,11 @@
 //! assert!(matches!(health.snapshot(), CircuitSnapshot::Open { .. }));
 //! # Ok::<(), poise_health::CircuitConfigError>(())
 //! ```
+//!
+//! # Support
+//!
+//! Support continued Poise engineering through
+//! [TokenTip](https://tokentip.to/@copyleftdev).
 
 #![forbid(unsafe_code)]
 
