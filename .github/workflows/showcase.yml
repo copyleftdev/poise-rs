@@ -64,6 +64,12 @@ jobs:
         timeout-minutes: 40
         run: scripts/mutants-core.sh --jobs 1
 
+      - name: Install pinned mdBook
+        run: cargo install mdbook --version 0.5.2 --locked
+
+      - name: Build engineering book
+        run: scripts/build-book.sh
+
       - name: Export honest showcase record
         if: always()
         env:

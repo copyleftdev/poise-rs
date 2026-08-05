@@ -41,7 +41,14 @@ Documentation changes should also pass:
 
 ```console
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
+cargo install mdbook --version 0.5.2 --locked
+scripts/build-book.sh
 ```
+
+`docs/SUMMARY.md` is the book's navigation contract. Every Markdown chapter in
+`docs/` must appear there, use one prose-level title, and keep local links
+resolvable. The build script enforces those rules before rendering the same
+`site/book/` artifact deployed by GitHub Pages.
 
 ## Choosing the right proof
 

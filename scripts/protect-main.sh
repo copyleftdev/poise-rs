@@ -14,6 +14,7 @@ gh api --method PUT "repos/$repository/branches/main/protection" --input - <<'JS
     "strict": true,
     "contexts": [
       "Format, lint, and docs",
+      "Documentation book",
       "Test / Rust stable",
       "Test / Rust 1.85.0",
       "Deterministic property laws",
