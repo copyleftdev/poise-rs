@@ -63,7 +63,9 @@ gh label create proposal --repo "$repository" --color 1d76db --description "Prop
 
 gh api --method PUT "repos/$repository/private-vulnerability-reporting" >/dev/null
 
-gh api --method PUT "repos/$repository/actions/permissions/workflow" +  -f default_workflow_permissions=read +  -F can_approve_pull_request_reviews=true >/dev/null
+gh api --method PUT "repos/$repository/actions/permissions/workflow" \
+  -f default_workflow_permissions=read \
+  -F can_approve_pull_request_reviews=true >/dev/null
 
 for environment in crates-io crates-io-bootstrap; do
   gh api --method PUT "repos/$repository/environments/$environment" >/dev/null
