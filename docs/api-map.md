@@ -42,6 +42,16 @@ dependencies.
 | `PeakEwma`, `PeakEwmaGuard` | Latency-and-concurrency estimator |
 | `LoadScore` | Ordered validated score representation |
 
+### Probe observations
+
+| API | Role |
+| --- | --- |
+| `ProbePool` | Bounded, self-expiring pool of out-of-band replica observations |
+| `ProbePoolConfig`, `ProbePoolConfigError` | Capacity, reuse, and age bounds |
+| `ProbeReading` | One reported queue depth and observed latency |
+| `ProbeEntry` | A retained observation and its remaining reuse budget |
+| `ProbeDecisionError` | Absent, rejected, and out-of-bounds decision outcomes |
+
 ## `poise-discovery`
 
 | API | Role |

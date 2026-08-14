@@ -1,9 +1,10 @@
 # Prequal proposal
 
-**Status: proposal.** No `Prequal` type exists in `poise-core`. This chapter
-states the contract a probe-based policy would have to satisfy before it is
-implemented, so the design can be reviewed before any code is written. Nothing
-described here is available in a released crate.
+**Status: partially implemented.** The probe pool described under
+[Probe pool contract](#probe-pool-contract) exists in `poise-core` as
+[`ProbePool`](api-map.md). No `Prequal` policy type exists: the hot-cold
+lexicographic rule, the decision type, and the fallback behavior remain
+proposals. Nothing in this chapter has appeared in a released crate.
 
 Prequal is proposed as the next selection family: a policy that chooses among
 replicas using asynchronously collected probes rather than candidate-attached
@@ -57,7 +58,8 @@ style of `LoadScore`, which already resolves `f64` comparison through
 ## Probe pool contract
 
 The pool is the novel component and carries the obligations that make the rule
-safe:
+safe. It is implemented as `ProbePool`, and the obligations below are its
+documented contract rather than an open design question:
 
 - **Bounded.** The pool holds at most a configured number of entries. Insertion
   past that bound evicts, and no code path grows it, matching the existing
@@ -74,6 +76,14 @@ safe:
   discarded at decision time. Health and discovery keep precedence; probing is a
   ranking signal layered on top of them, exactly as load is today.
 
+Bounded reuse only holds if reading an observation and charging its budget are
+one indivisible step. `ProbePool::decide_at` therefore takes the ranking
+function rather than returning the slice: expiry, selection, and charging happen
+under a single lock, so two concurrent selectors cannot both spend the last use
+of one observation. That also fixes where eligibility filtering belongs — inside
+the caller's ranking function, which is the only place that can see both the
+observations and the current candidate set.
+
 ## Determinism
 
 Prequal would be the first policy whose inputs vary with wall-clock time, which
@@ -84,7 +94,9 @@ already follow: `decide` takes one coherent view of the pool and reads it once,
 in the same way `BoundedLoadRendezvous` samples every eligible `LoadMetric`
 exactly once per decision. Given an identical pool state and an identical
 candidate slice, the selection is identical. Time enters through pool
-maintenance, which is separately modelled, and never through the selection rule.
+maintenance and never through the selection rule; every time-dependent pool
+operation has an `_at` form that takes the reading instant, so tests and
+simulations drive a synthetic clock rather than the wall clock.
 
 ## Crate placement
 
@@ -149,14 +161,16 @@ rather than inherited.
 
 Mapped onto the evidence table in [testing](testing.md):
 
-| Obligation | Evidence |
-| --- | --- |
-| Rule edge behavior | Unit tests and a compiling rustdoc example |
-| General laws | Proptest laws with committed regression seeds |
-| Seeded probe targeting | Exact replay plus distribution bounds |
-| Shared pool | A Loom model plus an ordinary threaded test |
-| Survivors | Contract tests holding `poise-core` at zero viable survivors |
-| Hot path | Criterion baselines, still an open roadmap gap |
+| Obligation | Evidence | State |
+| --- | --- | --- |
+| Pool retention edges | Unit tests and a compiling rustdoc example | Delivered |
+| Shared pool | Loom models over concurrent consumption | Delivered |
+| Pool interleavings | The `probe_pool` fuzz target | Delivered |
+| Survivors | Contract tests holding `poise-core` at zero viable survivors | Delivered for the pool |
+| Rule edge behavior | Unit tests and a compiling rustdoc example | Pending the policy |
+| General laws | Proptest laws with committed regression seeds | Pending the policy |
+| Seeded probe targeting | Exact replay plus distribution bounds | Pending the policy |
+| Hot path | Criterion baselines, still an open roadmap gap | Pending |
 
 The laws worth stating explicitly:
 
@@ -174,9 +188,10 @@ The laws worth stating explicitly:
 - a deliberately slow reference implementation of the rule, kept in the test
   support module, agrees with the optimized path on generated input.
 
-The pool additionally warrants a fuzz target driving arbitrary insert, expire,
-and select interleavings under the limits in [fuzzing](fuzzing.md): no panic, no
-capacity violation, no out-of-bounds index.
+The last three are pool properties and now hold. The `probe_pool` fuzz target
+drives arbitrary record, expire, and select interleavings under the limits in
+[fuzzing](fuzzing.md), and the Loom models cover the concurrent reuse bound.
+The remaining laws describe the selection rule and land with the policy.
 
 ## Open questions
 

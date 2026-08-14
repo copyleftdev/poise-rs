@@ -3,12 +3,13 @@
 use std::{
     hash::{BuildHasher, Hasher},
     num::{NonZeroU32, NonZeroU64, NonZeroUsize},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use poise_core::{
     AtCapacity, Backend, Candidate, Fnv1a64, InvalidWeight, Outcome, PeakEwma, PeakEwmaConfigError,
-    PickError, Policy, Status, Weight,
+    PickError, Policy, ProbeDecisionError, ProbePool, ProbePoolConfig, ProbeReading, Status,
+    Weight,
     policy::{
         BoundedLoadConfig, BoundedLoadRendezvous, LocalityWeightedRandom, Localized, Maglev,
         MaglevConfig, PanicMode, Prioritized, PriorityCandidate, PriorityConfig, PriorityMode,
@@ -172,6 +173,88 @@ fn public_error_messages_are_nonempty_and_specific() {
             .is_empty()
     );
     assert!(!MaglevConfig::new(4).unwrap_err().to_string().is_empty());
+    assert_eq!(
+        ProbePoolConfig::new(NonZeroUsize::MIN, NonZeroU32::MIN, Duration::ZERO)
+            .unwrap_err()
+            .to_string(),
+        "probe pool maximum age must be non-zero"
+    );
+
+    let decision_errors = [
+        ProbeDecisionError::NoProbes,
+        ProbeDecisionError::NoSelection,
+        ProbeDecisionError::IndexOutOfBounds,
+    ];
+    let rendered: Vec<String> = decision_errors
+        .iter()
+        .map(std::string::ToString::to_string)
+        .collect();
+    for message in &rendered {
+        assert!(!message.is_empty());
+    }
+    assert_eq!(
+        rendered
+            .iter()
+            .collect::<std::collections::HashSet<_>>()
+            .len(),
+        decision_errors.len(),
+        "each probe decision outcome must be distinguishable by message"
+    );
+}
+
+#[test]
+fn probe_pool_charges_exactly_one_use_per_decision() {
+    let config = ProbePoolConfig::new(
+        NonZeroUsize::new(2).unwrap(),
+        NonZeroU32::new(2).unwrap(),
+        Duration::from_secs(60),
+    )
+    .unwrap();
+    let pool = ProbePool::new(config);
+    let now = Instant::now();
+    pool.record_at("a", ProbeReading::new(1, Duration::from_millis(5)), now);
+
+    let first = pool.decide_at(now, |_| Some(0)).unwrap();
+    assert_eq!(first.remaining_uses(), 1);
+    assert_eq!(pool.len_at(now), 1, "a partially spent entry is retained");
+
+    let second = pool.decide_at(now, |_| Some(0)).unwrap();
+    assert_eq!(second.remaining_uses(), 0);
+    assert_eq!(pool.len_at(now), 0, "an exhausted entry is retired");
+    assert_eq!(
+        pool.decide_at(now, |_| Some(0)),
+        Err(ProbeDecisionError::NoProbes)
+    );
+}
+
+#[test]
+fn probe_pool_eviction_keeps_the_newest_observations() {
+    let config = ProbePoolConfig::new(
+        NonZeroUsize::new(2).unwrap(),
+        NonZeroU32::new(1).unwrap(),
+        Duration::from_secs(60),
+    )
+    .unwrap();
+    let pool = ProbePool::new(config);
+    let base = Instant::now();
+
+    for (offset, id) in ["oldest", "middle", "newest"].into_iter().enumerate() {
+        pool.record_at(
+            id,
+            ProbeReading::new(0, Duration::from_millis(1)),
+            base + Duration::from_millis(offset as u64),
+        );
+    }
+
+    let now = base + Duration::from_millis(10);
+    let mut retained = vec![
+        *pool.decide_at(now, |_| Some(0)).unwrap().id(),
+        *pool.decide_at(now, |_| Some(0)).unwrap().id(),
+    ];
+    retained.sort_unstable();
+
+    assert_eq!(retained, ["middle", "newest"]);
+    assert_eq!(pool.len_at(now), 0);
 }
 
 #[test]

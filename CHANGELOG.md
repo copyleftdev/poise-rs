@@ -11,6 +11,17 @@ Project development can be supported through
 
 ## [Unreleased]
 
+### Added
+
+- `ProbePool`, a bounded and self-expiring pool of out-of-band replica
+  observations, with `ProbePoolConfig`, `ProbeReading`, `ProbeEntry`, and typed
+  configuration and decision errors. Selection and reuse charging happen under
+  one lock so concurrent selectors cannot overspend a single observation.
+- Loom models over concurrent probe-pool consumption and a `probe_pool` fuzz
+  target covering record, expire, and select interleavings.
+- A [Prequal proposal](docs/prequal.md) chapter stating the probe-based
+  selection contract ahead of the policy itself.
+
 ## [0.1.1] - 2026-08-05
 
 ### Documentation

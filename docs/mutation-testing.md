@@ -44,8 +44,8 @@ The 2026-08-04 initial inventory generated 656 mutation sites. Before this
 hardening pass, 417 were caught, 94 were missed, 23 timed out, and 122 were
 unviable: 81.6% of completed viable mutations were caught.
 
-The hardened source and reviewed exclusions currently examine 642 sites. A
-complete campaign caught 497, missed zero, found 122 unviable, and detected 23
+The hardened source and reviewed exclusions currently examine 705 sites. A
+complete campaign caught 528, missed zero, found 154 unviable, and detected 23
 nonterminating mutants with the watchdog. The hardening work converted 82 of
 the original survivors into caught tests, proved 11 equivalent and documented
 them, and removed one performance-only Maglev cursor mutation by making

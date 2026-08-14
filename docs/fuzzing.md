@@ -1,11 +1,15 @@
 # Fuzzing and concurrency models
 
-Poise has two structure-aware libFuzzer targets:
+Poise has three structure-aware libFuzzer targets:
 
 - `policy_state_machine` mutates backend order, health, weight, and load while
   exercising general, load-aware, affinity, and stateful policies;
 - `topology_state_machine` generates priority, panic, and locality scenarios
-  and checks every successful decision against candidate metadata.
+  and checks every successful decision against candidate metadata;
+- `probe_pool` interleaves probe recording, selection, rejection, and clock
+  advance against the retention contract, checking that capacity holds, that no
+  expired observation informs a decision, that every decision charges exactly
+  one use, and that a rejected decision spends none.
 
 Build the targets without executing them:
 

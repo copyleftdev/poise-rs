@@ -25,5 +25,12 @@ test = false
 doc = false
 bench = false
 
+[[bin]]
+name = "probe_pool"
+path = "fuzz_targets/probe_pool.rs"
+test = false
+doc = false
+bench = false
+
 [workspace]
 members = ["."]
