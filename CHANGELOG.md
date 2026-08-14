@@ -22,6 +22,16 @@ Project development can be supported through
 - A [Prequal proposal](docs/prequal.md) chapter stating the probe-based
   selection contract ahead of the policy itself.
 
+### Changed
+
+- `scripts/mutants-core.sh` enforces its own resource bounds instead of relying
+  on the caller to pass them: one worker by default under a four-worker ceiling,
+  capped build parallelism, a memory ceiling with swap disabled, a CPU quota, a
+  wall-clock backstop, and scratch directories kept off RAM-backed filesystems.
+  An unbounded campaign is capable of taking a workstation down; nested
+  cargo-mutants and cargo parallelism multiply, and the per-worker tree copies
+  land in `TMPDIR`, which is a tmpfs on many systems.
+
 ## [0.1.1] - 2026-08-05
 
 ### Documentation

@@ -74,11 +74,16 @@ Run Loom explicitly:
 scripts/model-check.sh
 ```
 
-Mutation campaigns are maintainer/deep-CI work and default to one worker:
+Mutation campaigns are maintainer/deep-CI work. The wrapper enforces its own
+worker, memory, CPU, scratch-location, and wall-clock bounds, so run it plainly
+rather than reaching for cargo-mutants directly:
 
 ```console
-scripts/mutants-core.sh --jobs 1
+scripts/mutants-core.sh
 ```
+
+An unbounded campaign can take a workstation down. See the resource bounds in
+[Mutation testing](docs/mutation-testing.md) before overriding any of them.
 
 Do not launch fuzz targets without the time, memory, and corpus limits in
 [Fuzzing and concurrency](docs/fuzzing.md).

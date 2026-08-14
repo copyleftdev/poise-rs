@@ -7,20 +7,59 @@ survivor fails the campaign.
 The campaign is reproducible with cargo-mutants 27.0.0:
 
 ```console
-scripts/mutants-core.sh --jobs 1
+scripts/mutants-core.sh
 ```
 
 The wrapper enables all `poise-core` features and fixes the Proptest seed.
 Single-worker execution avoids sharing incremental compiler state between
-mutant copies. `.cargo/mutants.toml` owns timeouts and a small, reviewed list of
-equivalent mutations. Each exclusion has an adjacent proof explaining why the
-rewrite cannot change observable behavior. Do not add score-based or broad
-file exclusions to make a campaign green.
+mutant copies, and is now the enforced default rather than a flag to remember.
+`.cargo/mutants.toml` owns timeouts and a small, reviewed list of equivalent
+mutations. Each exclusion has an adjacent proof explaining why the rewrite
+cannot change observable behavior. Do not add score-based or broad file
+exclusions to make a campaign green.
+
+## Resource bounds
+
+A campaign rebuilds and retests the crate once per mutant, 705 times over. It is
+the most resource-hostile thing in this repository, and an unbounded run is
+capable of taking a workstation down hard enough to corrupt the git object
+store. The wrapper enforces its own limits; none of them depend on the caller
+passing a flag.
+
+- **Nested parallelism is capped.** cargo-mutants runs `--jobs` cargo
+  invocations, and each one spawns its own `CARGO_BUILD_JOBS` rustc processes.
+  The live process count is the *product* of the two, and neither factor bounds
+  the other, so their defaults multiply to `nproc` squared on a many-core
+  machine. The wrapper pins one worker and eight build jobs, and clamps any
+  larger `--jobs` request to a four-worker ceiling.
+- **Scratch directories stay off RAM-backed filesystems.** cargo-mutants copies
+  the source tree and the whole target directory per worker — currently 555 MB
+  each — into `TMPDIR`. Where `/tmp` is a tmpfs, that default puts every copy in
+  RAM and pushes roughly 390 GB of copy traffic through unreclaimable pages over
+  a full campaign. The wrapper defaults `TMPDIR` to `target/mutants-scratch` and
+  refuses to start if that path is on `tmpfs` or `ramfs`.
+- **Memory is capped with swap disabled.** The campaign runs in a transient
+  systemd scope with `MemoryMax` and `MemorySwapMax=0`. Measured peak is 1.4 GB
+  per worker against a 4 GB allowance. Disabling swap is the load-bearing half:
+  without it the kernel answers memory pressure by thrashing, which is what
+  makes the whole machine unresponsive rather than just failing the campaign.
+- **CPU is capped and the campaign is niced**, so an interactive session stays
+  responsive.
+- **A wall-clock backstop stops a wedged campaign.** A full run takes roughly
+  twenty minutes; the default ceiling is ninety.
+
+Exceeding the wall clock or the memory ceiling is reported as itself rather than
+as a mutation failure, so a limit that has genuinely become too tight for a
+growing crate is visible as a limit. `POISE_MUTANTS_JOBS`,
+`POISE_MUTANTS_MAX_JOBS`, `POISE_MUTANTS_BUILD_JOBS`,
+`POISE_MUTANTS_MEMORY_PER_JOB_MB`, `POISE_MUTANTS_TIMEOUT`, and
+`POISE_MUTANTS_SCRATCH` override the defaults. Raise one only after confirming
+the growth that needs it; the previous freeze is what these numbers are for.
 
 For a faster follow-up after adding tests, preserve `mutants.out` and run:
 
 ```console
-scripts/mutants-core.sh --iterate --jobs 1
+scripts/mutants-core.sh --iterate
 ```
 
 `mutants.out` is a local report and is intentionally ignored. Review its four
