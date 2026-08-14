@@ -68,7 +68,9 @@ Property tests use a fixed CI seed while still exploring fresh cases locally.
 Commit new `.regressions` files: they replay minimized failures before novel
 inputs.
 
-Run Loom explicitly:
+Run Loom explicitly. The wrapper caps concurrent models, memory, CPU, and wall
+clock, and makes loom's branch ceiling explicit; see the bounds in
+[Fuzzing and concurrency models](docs/fuzzing.md):
 
 ```console
 scripts/model-check.sh

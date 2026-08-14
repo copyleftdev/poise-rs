@@ -31,6 +31,14 @@ Project development can be supported through
   An unbounded campaign is capable of taking a workstation down; nested
   cargo-mutants and cargo parallelism multiply, and the per-worker tree copies
   land in `TMPDIR`, which is a tmpfs on many systems.
+- `scripts/model-check.sh` bounds Loom the same way, through a shared
+  `scripts/lib/resource-bounds.sh`: capped concurrent models and build
+  parallelism, a memory ceiling with swap disabled, a CPU quota, a wall-clock
+  backstop, and an explicit `LOOM_MAX_BRANCHES`. Exceeding the branch ceiling
+  fails loudly, so the bound cannot silently shrink coverage; preemption
+  bounding, which would, is deliberately left unset. Both wrappers prefer a
+  systemd scope and fall back to their remaining bounds with a warning where one
+  cannot be created, since CI runners have no user session bus.
 
 ## [0.1.1] - 2026-08-05
 

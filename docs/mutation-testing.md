@@ -44,7 +44,11 @@ passing a flag.
   without it the kernel answers memory pressure by thrashing, which is what
   makes the whole machine unresponsive rather than just failing the campaign.
 - **CPU is capped and the campaign is niced**, so an interactive session stays
-  responsive.
+  responsive. Isolation is preferred but not required: `systemd-run --user`
+  needs a session bus that CI runners generally lack, so the wrapper probes for
+  a usable scope and falls back to its remaining bounds with a warning when
+  there is none. Set `POISE_REQUIRE_ISOLATION=1` to make a missing cage a hard
+  failure instead.
 - **A wall-clock backstop stops a wedged campaign.** A full run takes roughly
   twenty minutes; the default ceiling is ninety.
 

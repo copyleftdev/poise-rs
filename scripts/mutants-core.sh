@@ -14,17 +14,14 @@ export PROPTEST_RNG_SEED="${PROPTEST_RNG_SEED:-1592614637}"
 # mutants.out where the gate below looks for it, whatever the caller's directory.
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root"
+# shellcheck source=scripts/lib/resource-bounds.sh
+source "${repo_root}/scripts/lib/resource-bounds.sh"
 scratch_root="${POISE_MUTANTS_SCRATCH:-${repo_root}/target/mutants-scratch}"
 jobs="${POISE_MUTANTS_JOBS:-1}"
 max_jobs="${POISE_MUTANTS_MAX_JOBS:-4}"
 build_jobs="${POISE_MUTANTS_BUILD_JOBS:-8}"
 memory_per_job_mb="${POISE_MUTANTS_MEMORY_PER_JOB_MB:-4096}"
 campaign_timeout="${POISE_MUTANTS_TIMEOUT:-5400}"
-
-if ! command -v systemd-run >/dev/null 2>&1; then
-  echo "mutation campaigns require systemd-run for hard CPU and memory isolation" >&2
-  exit 78
-fi
 
 # Bound 1: nested parallelism. cargo-mutants runs `jobs` cargo invocations and
 # each one spawns its own `CARGO_BUILD_JOBS` rustc processes, so the real
@@ -123,16 +120,11 @@ fi
 memory_max="$(( jobs * memory_per_job_mb ))M"
 cpu_quota="$(( jobs * build_jobs * 100 ))%"
 
-echo "mutation campaign bounds: ${jobs} worker(s) x ${build_jobs} build jobs," \
-  "${memory_max} memory, no swap, ${cpu_quota} CPU, ${campaign_timeout}s wall clock," \
+echo "mutation campaign: ${jobs} worker(s) x ${build_jobs} build jobs," \
   "scratch on ${scratch_fs} at ${scratch_root}"
 
 set +e
-systemd-run --user --scope --quiet --collect \
-  -p CPUQuota="$cpu_quota" \
-  -p MemoryMax="$memory_max" \
-  -p MemorySwapMax=0 \
-  nice -n 15 timeout --signal=INT "$campaign_timeout" \
+bounds_run "$cpu_quota" "$memory_max" "$campaign_timeout" "mutation campaign" -- \
   cargo mutants \
   --package poise-core \
   --all-features \
@@ -144,16 +136,8 @@ set -e
 # Distinguish "the gate failed" from "the bounds stopped us", so a limit that is
 # genuinely too tight for a growing crate is visible as itself rather than
 # reported as a mutation failure.
-if (( status == 124 || status == 130 )); then
-  echo "mutation campaign exceeded its ${campaign_timeout}s wall clock and was stopped" >&2
-  echo "raise POISE_MUTANTS_TIMEOUT for a legitimately longer campaign" >&2
-  exit "$status"
-fi
-# The cgroup terminates the scope rather than letting it swap, which surfaces as
-# SIGTERM or SIGKILL depending on how far the campaign got before it was stopped.
-if (( status == 137 || status == 143 )); then
-  echo "mutation campaign was stopped at the ${memory_max} memory ceiling" >&2
-  echo "raise POISE_MUTANTS_MEMORY_PER_JOB_MB only after confirming the growth is expected" >&2
+if (( status != 0 )) && bounds_explain_stop "$status" "$memory_max" "$campaign_timeout" \
+  "POISE_MUTANTS_TIMEOUT:POISE_MUTANTS_MEMORY_PER_JOB_MB"; then
   exit "$status"
 fi
 
