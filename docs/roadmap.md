@@ -5,7 +5,8 @@
 - [x] Candidate, status, weight, selection, and policy contracts.
 - [x] Round robin, random, weighted random, least loaded, P2C, and rendezvous.
 - [x] Deterministic tests, generated policy invariants, and rustdoc examples.
-- Criterion benchmarks and performance regression baselines.
+- [x] Criterion benchmarks and recorded baselines for `poise-core` selection
+  and membership-change cost. Dispatch, health, and discovery remain unmeasured.
 - Naming, licensing, security policy, MSRV policy, and governance before
   publication.
 
