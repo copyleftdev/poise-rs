@@ -50,3 +50,4 @@
 
 - [Release engineering](releasing.md)
 - [Roadmap](roadmap.md)
+- [Prequal proposal](prequal.md)
