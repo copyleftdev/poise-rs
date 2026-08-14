@@ -25,6 +25,11 @@ Project development can be supported through
   and degradation control identified as an obligation the pool does not yet
   meet.
 
+- Criterion benchmarks for `poise-core`: steady-state selection cost for every
+  stable policy across 8, 64, and 512 candidates, and membership-change cost for
+  the policies that cache a table, with recorded baselines in
+  [Performance](docs/performance.md) and a `scripts/bench.sh` wrapper.
+
 ### Changed
 
 - `scripts/mutants-core.sh` enforces its own resource bounds instead of relying
@@ -42,6 +47,12 @@ Project development can be supported through
   bounding, which would, is deliberately left unset. Both wrappers prefer a
   systemd scope and fall back to their remaining bounds with a warning where one
   cannot be created, since CI runners have no user session bus.
+- The selection-cost table no longer reports Maglev and ring-hash `pick` as
+  `O(1)` and `O(log p)`. Both validate the cached table against the candidate
+  slice on every pick, so measured cost grows with candidate count; the
+  constant-time lookup is not the dominant term. Their advantage is a small
+  per-candidate constant and bounded disruption under churn, not a cheaper
+  asymptote.
 
 ## [0.1.1] - 2026-08-05
 

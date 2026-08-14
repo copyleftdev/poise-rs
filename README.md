@@ -213,11 +213,16 @@ so the visualization and reference material always describe one revision.
 
 ## Performance stance
 
-The core is designed to be allocation-conscious and deterministic, but Poise
-does not publish unsupported performance claims. Criterion baselines across
-small and large backend sets are still a release-roadmap item. Until those
-baselines land, evaluate the exact candidate counts, churn rates, and policy
-families used by your deployment.
+The core is designed to be allocation-conscious and deterministic, and Poise
+does not publish unsupported performance claims. Criterion baselines now cover
+every `poise-core` selection policy across small and large backend sets, and
+the membership-change cost of the policies that cache a table; `scripts/bench.sh`
+reproduces them. They do not yet cover Tower dispatch, health, or discovery.
+
+Read those baselines for how a policy scales, not for how fast your deployment
+will be. The constants belong to one machine and one compiler; the shape of the
+curve is the part that transfers. Evaluate the exact candidate counts, churn
+rates, and policy families you actually run.
 
 ## Compatibility and stability
 
@@ -259,8 +264,8 @@ are configured. See [Release engineering](docs/releasing.md).
 
 The advanced policy, health, discovery, Tower, Tokio, observability, property,
 mutation, and Loom foundations are implemented. Remaining pre-1.0 priorities
-include criterion regression baselines, retry/hedge exclusion, adaptive
-concurrency, capacity-aware routing, and governance.
+include retry/hedge exclusion, adaptive concurrency, capacity-aware routing,
+benchmark coverage beyond `poise-core`, and governance.
 See the [roadmap](docs/roadmap.md).
 
 ## Security

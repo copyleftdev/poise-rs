@@ -11,12 +11,34 @@ homepage.workspace = true
 readme = "../../README.md"
 keywords = ["load-balancing", "distributed-systems", "networking"]
 categories = ["algorithms", "network-programming"]
+# Every file in benches/ is otherwise its own bench target, which makes the
+# shared fixture module a target with no `main` and fails the whole run.
+autobenches = false
+
+[lib]
+# `cargo bench` otherwise also runs the lib's libtest harness, which rejects
+# criterion's arguments -- `--save-baseline` fails before a benchmark runs.
+bench = false
 
 [dependencies]
 rand = "0.10.2"
 
 [dev-dependencies]
 proptest = { version = "=1.11.0", default-features = false, features = ["std"] }
+# Pinned like the other measurement tooling: a baseline is only comparable
+# against runs of the same harness. Default features pull in plotting and rayon,
+# which this crate does not need to record a regression baseline.
+criterion = { version = "=0.7.0", default-features = false, features = [
+    "cargo_bench_support",
+] }
+
+[[bench]]
+name = "selection"
+harness = false
+
+[[bench]]
+name = "membership"
+harness = false
 
 [target.'cfg(loom)'.dependencies]
 loom = "=0.7.2"
