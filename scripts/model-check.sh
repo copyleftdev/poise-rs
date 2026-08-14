@@ -30,9 +30,13 @@ export RUST_TEST_THREADS="$test_threads"
 # it aborts the model with a loud failure, so this bound cannot silently shrink
 # coverage -- a model that outgrows it fails until someone raises it deliberately.
 #
-# Deliberately not set: LOOM_MAX_PREEMPTIONS. Bounding preemptions makes
-# exploration cheaper by making it partial, and it does so silently. That trades
-# away the property this gate exists to establish.
+# Actively cleared, not merely left unset: `loom::model` builds through
+# `Builder::new`, which reads `LOOM_MAX_PREEMPTIONS` from the environment and
+# applies it as a preemption bound. An inherited value would silently prune
+# interleavings -- cheaper exploration by making it partial, without saying so --
+# which is precisely the property this gate exists to establish. Leaving the
+# variable unset here does nothing about one exported by the caller.
+unset LOOM_MAX_PREEMPTIONS
 export LOOM_MAX_BRANCHES="${LOOM_MAX_BRANCHES:-1000}"
 
 cpu_quota="$(( build_jobs * 100 ))%"

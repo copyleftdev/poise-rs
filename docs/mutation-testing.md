@@ -50,7 +50,11 @@ passing a flag.
   there is none. Set `POISE_REQUIRE_ISOLATION=1` to make a missing cage a hard
   failure instead.
 - **A wall-clock backstop stops a wedged campaign.** A full run takes roughly
-  twenty minutes; the default ceiling is ninety.
+  twenty minutes; the default ceiling is ninety. It interrupts first so cargo
+  can report, then escalates to `SIGKILL`, and where a systemd scope exists a
+  slightly later `RuntimeMaxSec` stops the entire cgroup — which is what
+  actually covers descendants, since `timeout` only ever signals its direct
+  child.
 
 Exceeding the wall clock or the memory ceiling is reported as itself rather than
 as a mutation failure, so a limit that has genuinely become too tight for a

@@ -214,7 +214,8 @@ struct PoolState<Id> {
 /// # Retention contract
 ///
 /// - **Bounded.** At most `capacity` observations are retained. Recording into
-///   a full pool evicts the oldest.
+///   a full pool evicts the oldest, or drops the incoming observation when that
+///   is the staler of the two.
 /// - **Consumed on use.** An observation informs at most `max_uses` decisions
 ///   and is then discarded. This is a correctness property rather than an
 ///   optimization: an observation reporting an idle replica that every
@@ -305,14 +306,22 @@ impl<Id> ProbePool<Id> {
     /// Records an observation taken at `now`.
     ///
     /// A full pool evicts its oldest retained observation, which is the one
-    /// closest to expiry and therefore the least informative.
+    /// closest to expiry and therefore the least informative. When the incoming
+    /// observation is itself older than everything retained, it is the least
+    /// informative one and is dropped instead: probes complete out of order, so
+    /// a later recording can carry an earlier instant, and displacing a fresher
+    /// entry with a staler one would leave the pool worse than before.
     pub fn record_at(&self, id: Id, reading: ProbeReading, now: Instant) {
         let mut state = self.lock();
         self.expire(&mut state, now);
 
         if state.entries.len() >= self.config.capacity.get() {
-            if let Some(oldest) = Self::oldest_index(&state) {
-                state.entries.remove(oldest);
+            match Self::oldest_index(&state) {
+                Some(oldest) if state.entries[oldest].recorded_at > now => return,
+                Some(oldest) => {
+                    state.entries.remove(oldest);
+                }
+                None => {}
             }
         }
 
@@ -630,6 +639,40 @@ mod tests {
         retained.sort_unstable();
 
         assert_eq!(retained, ["newer", "newest"]);
+    }
+
+    #[test]
+    fn a_full_pool_keeps_the_fresher_of_two_observations() {
+        let pool = ProbePool::new(config(1, 1, Duration::from_secs(60)));
+        let base = Instant::now();
+        pool.record_at("fresher", reading(0, 1), base + Duration::from_millis(30));
+
+        // A probe issued earlier can complete later. Admitting it would evict
+        // the fresher observation and leave the pool strictly worse informed.
+        pool.record_at("staler", reading(0, 2), base + Duration::from_millis(5));
+
+        let now = base + Duration::from_millis(40);
+        assert_eq!(pool.len_at(now), 1);
+        assert_eq!(pool.decide_at(now, |_| Some(0)).unwrap().id(), &"fresher");
+    }
+
+    #[test]
+    fn a_full_pool_admits_an_observation_sharing_the_oldest_instant() {
+        let pool = ProbePool::new(config(1, 1, Duration::from_secs(60)));
+        let base = Instant::now();
+        pool.record_at("first", reading(0, 1), base);
+
+        // Only a strictly staler observation is refused. A clock too coarse to
+        // separate two probes must not freeze the pool on whichever landed
+        // first, which is what refusing equal instants would do.
+        pool.record_at("second", reading(0, 2), base);
+
+        assert_eq!(
+            pool.decide_at(base + Duration::from_millis(1), |_| Some(0))
+                .unwrap()
+                .id(),
+            &"second"
+        );
     }
 
     #[test]

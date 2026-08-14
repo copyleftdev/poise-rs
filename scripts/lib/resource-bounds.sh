@@ -33,6 +33,17 @@ bounds_run() {
   shift 4
   [[ ${1-} == "--" ]] && shift
 
+  # SIGINT first so cargo and its children can unwind and report, then SIGKILL
+  # after a grace period, because a wedged process is exactly what a backstop is
+  # for and INT is ignorable. `timeout` only signals its direct child, though,
+  # so a grandchild that outlives its parent escapes it entirely.
+  local kill_grace="${POISE_BOUNDS_KILL_GRACE:-30}"
+  # The scope closes that gap where one exists: systemd stops the whole cgroup,
+  # descendants included, and does not depend on any process honoring a signal.
+  # It is deliberately later than the `timeout` deadline so the graceful path
+  # runs first and only a genuinely stuck run reaches this.
+  local scope_deadline=$(( timeout_seconds + kill_grace + 15 ))
+
   local prefix=()
   if bounds_isolation_available; then
     prefix=(
@@ -40,6 +51,7 @@ bounds_run() {
       -p CPUQuota="$cpu_quota"
       -p MemoryMax="$memory_max"
       -p MemorySwapMax=0
+      -p RuntimeMaxSec="$scope_deadline"
     )
     echo "${label} bounds: ${memory_max} memory, no swap, ${cpu_quota} CPU," \
       "${timeout_seconds}s wall clock"
@@ -54,7 +66,14 @@ bounds_run() {
       "parallelism caps and the ${timeout_seconds}s wall clock still apply" >&2
   fi
 
-  "${prefix[@]}" nice -n 15 timeout --signal=INT "$timeout_seconds" "$@"
+  local started=$SECONDS status=0
+  "${prefix[@]}" nice -n 15 \
+    timeout --signal=INT --kill-after="$kill_grace" "$timeout_seconds" "$@" || status=$?
+  # Exit status alone cannot separate a forced timeout kill from a memory kill:
+  # GNU timeout reports 137 after escalating, and so does the cgroup. Elapsed
+  # time can, so record it for bounds_explain_stop.
+  BOUNDS_ELAPSED=$(( SECONDS - started ))
+  return "$status"
 }
 
 # Explains the stopping condition when a bounded run is cut short, so a limit
@@ -62,16 +81,25 @@ bounds_run() {
 # reported as a verification failure. Returns success when it handled the status.
 bounds_explain_stop() {
   local status="$1" memory_max="$2" timeout_seconds="$3" raise_hint="$4"
+  local elapsed="${BOUNDS_ELAPSED:-0}"
 
-  if (( status == 124 || status == 130 )); then
+  # 124 is unambiguous: timeout stopped a command that honored SIGINT. A signal
+  # status is not, because the forced kill after the grace period and the cgroup
+  # both report one. Reaching the wall clock is what separates them.
+  local hit_wall_clock=0
+  (( status == 124 )) && hit_wall_clock=1
+  (( (status == 130 || status == 137 || status == 143) && elapsed >= timeout_seconds )) &&
+    hit_wall_clock=1
+
+  if (( hit_wall_clock )); then
     echo "stopped after exceeding the ${timeout_seconds}s wall clock" >&2
     echo "raise ${raise_hint%%:*} for a legitimately longer run" >&2
     return 0
   fi
-  # The cgroup terminates the scope rather than letting it swap, which surfaces
-  # as SIGTERM or SIGKILL depending on how far the run got.
+  # Short of the wall clock, the cgroup terminated the scope rather than letting
+  # it swap, surfacing as SIGTERM or SIGKILL depending on how far the run got.
   if (( status == 137 || status == 143 )); then
-    echo "stopped at the ${memory_max} memory ceiling" >&2
+    echo "stopped at the ${memory_max} memory ceiling after ${elapsed}s" >&2
     echo "raise ${raise_hint##*:} only after confirming the growth is expected" >&2
     return 0
   fi

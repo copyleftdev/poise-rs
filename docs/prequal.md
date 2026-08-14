@@ -166,7 +166,7 @@ Mapped onto the evidence table in [testing](testing.md):
 | Pool retention edges | Unit tests and a compiling rustdoc example | Delivered |
 | Shared pool | Loom models over concurrent consumption | Delivered |
 | Pool interleavings | The `probe_pool` fuzz target | Delivered |
-| Survivors | Contract tests holding `poise-core` at zero viable survivors | Delivered for the pool |
+| Survivors | The mutation campaign holding `poise-core` at zero viable survivors, with pool contract tests among what catches them | Delivered for the pool |
 | Rule edge behavior | Unit tests and a compiling rustdoc example | Pending the policy |
 | General laws | Proptest laws with committed regression seeds | Pending the policy |
 | Seeded probe targeting | Exact replay plus distribution bounds | Pending the policy |
@@ -188,10 +188,12 @@ The laws worth stating explicitly:
 - a deliberately slow reference implementation of the rule, kept in the test
   support module, agrees with the optimized path on generated input.
 
-The last three are pool properties and now hold. The `probe_pool` fuzz target
-drives arbitrary record, expire, and select interleavings under the limits in
-[fuzzing](fuzzing.md), and the Loom models cover the concurrent reuse bound.
-The remaining laws describe the selection rule and land with the policy.
+The bound-and-expiry law and the concurrent-reuse law are pool properties and
+now hold. The `probe_pool` fuzz target drives arbitrary record, expire, and
+select interleavings under the limits in [fuzzing](fuzzing.md), and the Loom
+models cover the concurrent reuse bound. Reference-implementation parity is
+listed with them, but it validates the selection rule rather than the pool, so
+it stays pending with the rest of the rule laws and lands with the policy.
 
 ## Open questions
 

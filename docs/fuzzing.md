@@ -69,7 +69,9 @@ reason: an unbounded verification job is capable of taking its machine down.
   exploration cheaper by making it partial, and it does so silently. That trades
   away the property this gate exists to establish.
 - **Memory, CPU, and wall clock are capped** inside a transient systemd scope
-  with swap disabled.
+  with swap disabled. The wall clock interrupts first, escalates to `SIGKILL`,
+  and is backed by a slightly later `RuntimeMaxSec` on the scope, which stops
+  the whole cgroup rather than only the direct child.
 
 `POISE_LOOM_BUILD_JOBS`, `POISE_LOOM_TEST_THREADS`, `POISE_LOOM_MEMORY_MAX`, and
 `POISE_LOOM_TIMEOUT` override the defaults.
