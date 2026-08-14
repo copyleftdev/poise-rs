@@ -58,8 +58,10 @@ scripts/protect-main.sh copyleftdev/poise-rs
 The script creates or configures a public repository, enables issues,
 discussions, and private vulnerability reporting, disables the wiki and
 projects, configures merge hygiene, and installs the intended topics. After the
-initial push, the protection script requires review, resolved conversations,
-linear history, and the full CI/security check set. Review the settings
+initial push, the protection script requires pull requests, resolved
+conversations, linear history, and the full CI/security check set, and exempts
+nobody from them. It does not require an approving review; see the note on the
+release gates above. Review the settings
 afterward.
 
 Protect `main` with required pull requests and these CI jobs:
