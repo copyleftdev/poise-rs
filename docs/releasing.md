@@ -104,11 +104,18 @@ Regular releases then use GitHub OIDC and no long-lived registry secret.
 3. Review SemVer decisions, API compatibility output, all manifest diffs,
    `Cargo.lock`, and `CHANGELOG.md`.
 4. Merge the release PR without bypassing required checks.
-5. Release-plz publishes unpublished workspace versions, creates per-crate tags,
-   and creates GitHub releases.
+5. Release-plz publishes unpublished workspace versions, creates one workspace
+   tag, and creates one GitHub release.
 
 All crates use the `poise` version group. A change that forces one dependent
 crate to bump keeps the affected workspace versions coherent.
+
+Because every crate shares one version, the workspace publishes a single
+`v0.1.1`-style tag rather than six package-qualified ones. Release-plz has no
+notion of tagging a version group, so `git_tag_enable` and `git_release_enable`
+are disabled workspace-wide and re-enabled only on `poise-core`, which every
+other crate depends on. Enabling either flag for a second package would make
+that package contend for the same tag name.
 
 ## Explicit bump hook
 
