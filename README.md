@@ -157,15 +157,15 @@ For the full boundary model, read [Architecture](docs/architecture.md), the
 
 Poise treats behavioral laws as public API.
 
-- **240 authored test entry points** cover examples, edge conditions,
+- **259 authored test entry points** cover examples, edge conditions,
   distributions, concurrency, cancellation, and transactional failure.
 - **14 Proptest laws** run 256 generated cases each by default and shrink
   failures into committed regression seeds.
 - **Mutation testing** requires every terminating viable `poise-core` mutation
-  to be caught. The recorded full campaign examined 642 sites with zero viable
+  to be caught. The recorded full campaign examined 705 sites with zero viable
   survivors; watchdog-detected nontermination remains visible.
-- **Six Loom models** exhaustively explore scheduler interleavings around
-  in-flight accounting and health state transitions.
+- **Ten Loom models** exhaustively explore scheduler interleavings around
+  in-flight accounting, probe-pool consumption, and health state transitions.
 - **MSRV verification** runs the workspace and all features on Rust 1.85.
 - **Doctests, strict Clippy, rustfmt, rustdoc, dependency policy, and package
   dry-runs** are release gates.

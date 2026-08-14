@@ -68,17 +68,24 @@ Property tests use a fixed CI seed while still exploring fresh cases locally.
 Commit new `.regressions` files: they replay minimized failures before novel
 inputs.
 
-Run Loom explicitly:
+Run Loom explicitly. The wrapper caps concurrent models, memory, CPU, and wall
+clock, and makes loom's branch ceiling explicit; see the bounds in
+[Fuzzing and concurrency models](docs/fuzzing.md):
 
 ```console
 scripts/model-check.sh
 ```
 
-Mutation campaigns are maintainer/deep-CI work and default to one worker:
+Mutation campaigns are maintainer/deep-CI work. The wrapper enforces its own
+worker, memory, CPU, scratch-location, and wall-clock bounds, so run it plainly
+rather than reaching for cargo-mutants directly:
 
 ```console
-scripts/mutants-core.sh --jobs 1
+scripts/mutants-core.sh
 ```
+
+An unbounded campaign can take a workstation down. See the resource bounds in
+[Mutation testing](docs/mutation-testing.md) before overriding any of them.
 
 Do not launch fuzz targets without the time, memory, and corpus limits in
 [Fuzzing and concurrency](docs/fuzzing.md).

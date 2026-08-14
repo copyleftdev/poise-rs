@@ -9,7 +9,7 @@ if ! command -v systemd-run >/dev/null 2>&1; then
   exit 78
 fi
 
-for target in policy_state_machine topology_state_machine; do
+for target in policy_state_machine topology_state_machine probe_pool; do
   # Keep developer-machine smoke runs deliberately tiny. Full campaigns belong
   # on isolated CI workers with externally enforced resource limits.
   systemd-run --user --scope --quiet --collect \
