@@ -20,7 +20,10 @@ Project development can be supported through
 - Loom models over concurrent probe-pool consumption and a `probe_pool` fuzz
   target covering record, expire, and select interleavings.
 - A [Prequal proposal](docs/prequal.md) chapter stating the probe-based
-  selection contract ahead of the policy itself.
+  selection contract ahead of the policy itself, with the originating paper's
+  operating points recorded, three of its open questions resolved against them,
+  and degradation control identified as an obligation the pool does not yet
+  meet.
 
 ### Changed
 

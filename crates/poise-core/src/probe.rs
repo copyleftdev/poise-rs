@@ -88,8 +88,17 @@ impl Error for ProbePoolConfigError {}
 /// One out-of-band observation of a replica.
 ///
 /// Requests-in-flight is the replica's own reported queue depth, not a count
-/// maintained by the caller. Latency is the observed service time for the probe
-/// itself.
+/// maintained by the caller.
+///
+/// Latency is what the replica reports as its current service time, and a
+/// reporter owes more than the probe's own round-trip. The signal a
+/// latency-ranking policy needs is service time *at the concurrency the replica
+/// is currently running at* — in the originating design, the median of recently
+/// finished queries tagged with the requests-in-flight value observed when they
+/// arrived. Reporting the probe's round-trip instead satisfies this type while
+/// describing something else: probe handling is cheap and largely independent of
+/// how loaded the replica is, so the ranking degrades toward measuring the
+/// network. Neither this type nor [`ProbePool`] can enforce the distinction.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct ProbeReading {
     requests_in_flight: u64,
