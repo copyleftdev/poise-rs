@@ -10,8 +10,12 @@ The six crate names were claimed with version `0.1.0` on August 5, 2026, after
 the repository's CI, package, Loom, property, and mutation gates passed. New
 versions remain gated on all of the following:
 
-1. GitHub Actions, protected environments, required reviews, and private
-   vulnerability reporting remain enabled.
+1. GitHub Actions, protected environments, branch protection, and private
+   vulnerability reporting remain enabled. Branch protection requires a pull
+   request and all nine checks, and exempts nobody; it does not require an
+   approving review, because a single maintainer with write access cannot
+   supply one. Item 3 is therefore a maintainer obligation rather than a
+   mechanically enforced gate, and should be read as one.
 2. The complete CI, MSRV, Loom, package, and mutation gates are green on the
    exact release commit.
 3. The release PR's SemVer decisions, archive contents, changelog, and API
