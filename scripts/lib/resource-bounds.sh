@@ -54,8 +54,13 @@ bounds_run() {
   # runs first and only a genuinely stuck run reaches this.
   local scope_deadline=$(( timeout_seconds + kill_grace + 15 ))
 
+  # Whether a memory ceiling actually exists, which the degraded path below does
+  # not create. bounds_explain_stop must not name a ceiling that was never set.
+  BOUNDS_CAGED=0
+
   local prefix=()
   if bounds_isolation_available; then
+    BOUNDS_CAGED=1
     prefix=(
       systemd-run --user --scope --quiet --collect
       -p CPUQuota="$cpu_quota"
@@ -91,24 +96,25 @@ bounds_run() {
 # reported as a verification failure. Returns success when it handled the status.
 bounds_explain_stop() {
   local status="$1" memory_max="$2" timeout_seconds="$3" raise_hint="$4"
-  local elapsed="${BOUNDS_ELAPSED:-0}"
+  local elapsed="${BOUNDS_ELAPSED:-0}" caged="${BOUNDS_CAGED:-0}"
 
-  # 124 is unambiguous: timeout stopped a command that honored SIGINT. A signal
-  # status is not, because the forced kill after the grace period and the cgroup
-  # both report one. Reaching the wall clock is what separates them.
-  local hit_wall_clock=0
-  (( status == 124 )) && hit_wall_clock=1
-  (( (status == 130 || status == 137 || status == 143) && elapsed >= timeout_seconds )) &&
-    hit_wall_clock=1
+  # No status proves the deadline fired. 124 is timeout's own convention but it
+  # also passes a command's exit status through unchanged, so a tool exiting 124
+  # on its own would be misread; the signal statuses are shared with the cgroup.
+  # Only reaching the deadline distinguishes them, and `SECONDS` truncates, so
+  # allow a second of slack rather than missing the boundary case.
+  local reached_deadline=0
+  (( elapsed + 1 >= timeout_seconds )) && reached_deadline=1
 
-  if (( hit_wall_clock )); then
+  if (( reached_deadline && (status == 124 || status == 130 || status == 137 || status == 143) )); then
     echo "stopped after exceeding the ${timeout_seconds}s wall clock" >&2
     echo "raise ${raise_hint%%:*} for a legitimately longer run" >&2
     return 0
   fi
-  # Short of the wall clock, the cgroup terminated the scope rather than letting
-  # it swap, surfacing as SIGTERM or SIGKILL depending on how far the run got.
-  if (( status == 137 || status == 143 )); then
+  # Short of the deadline, a signal means the cgroup terminated the scope rather
+  # than letting it swap -- but only if there was a cgroup. Without one there is
+  # no ceiling to name, and the status belongs to the command.
+  if (( caged && (status == 137 || status == 143) )); then
     echo "stopped at the ${memory_max} memory ceiling after ${elapsed}s" >&2
     echo "raise ${raise_hint##*:} only after confirming the growth is expected" >&2
     return 0

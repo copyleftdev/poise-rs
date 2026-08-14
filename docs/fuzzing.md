@@ -76,8 +76,15 @@ reason: an unbounded verification job is capable of taking its machine down.
 `POISE_LOOM_BUILD_JOBS`, `POISE_LOOM_TEST_THREADS`, `POISE_LOOM_MEMORY_MAX`, and
 `POISE_LOOM_TIMEOUT` override the defaults.
 
-Isolation is preferred but not required. `systemd-run --user` needs a session
-bus that CI runners generally lack, so both wrappers probe for a usable scope
-and fall back to their remaining bounds with a warning when there is none — a CI
-worker is already an externally limited sandbox. Set `POISE_REQUIRE_ISOLATION=1`
-to turn a missing cage into a hard failure instead.
+Isolation is preferred but not required, and the three wrappers differ on this
+deliberately. `scripts/model-check.sh` and `scripts/mutants-core.sh` probe for a
+usable scope and fall back to their remaining bounds with a warning when there
+is none, because both run in CI and `systemd-run --user` needs a session bus
+that a runner may not provide — and a CI worker is already an externally limited
+sandbox. Set `POISE_REQUIRE_ISOLATION=1` to turn a missing cage into a hard
+failure for those two.
+
+`scripts/fuzz-smoke.sh` has no fallback and exits 78 without `systemd-run`. That
+is not an inconsistency: nothing in CI runs it, and a fuzz target is designed to
+run until something breaks, so an unbounded local fuzz run has no natural end to
+degrade toward.

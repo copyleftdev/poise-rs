@@ -95,6 +95,30 @@ pool knows none of those four quantities — but it means the number is only
 meaningful when something upstream derives it, and that derivation belongs with
 the policy rather than with a caller's guess.
 
+That derivation is partial, and any implementation must say what it does outside
+the domain. The expression is only defined where
+
+```text
+n > m    and    (1 - m/n) * r_probe > r_remove
+```
+
+The first condition is the ordinary case — fewer pool slots than replicas — and
+the pool is pointless without it. The second is the real constraint: it says
+probes must arrive faster than the pool sheds them. It is not a remote edge.
+With the paper's own `m = 16`, `r_probe = 3`, `r_remove = 1`, a replica count of
+24 makes the denominator exactly zero, and any smaller fleet makes it negative.
+Reaching for `max{1, ...}` does not rescue this; a zero denominator is a
+division error before the maximum is ever taken, and a negative one silently
+returns a budget of 1 that is not the formula's answer but the clamp's.
+
+The condition has an operational reading: at that probe and removal rate the
+pool cannot sustain itself, so no reuse budget makes it self-supporting.
+Reuse is not the lever there — `r_probe` must rise or `r_remove` must fall.
+A policy computing this must therefore validate the domain first and report the
+combination as a configuration error, in the manner of `ProbePoolConfigError`,
+rather than dividing and hoping. Depletion is then a tuning outcome the operator
+chose, visible through the fallback regime, and not an arithmetic accident.
+
 ## Probe pool contract
 
 The pool is the novel component and carries the obligations that make the rule
@@ -149,13 +173,14 @@ the bias the rule is least able to detect, because a uniformly pessimistic pool
 still looks internally consistent.
 
 Removing the worst probe requires ranking, and the pool deliberately has no
-opinion about ranking. The resolution follows the shape `decide_at` already
-established: the caller supplies the ordering, the pool owns the mechanics and
-the lock. A removal entry point takes a ranking function, applies it in reverse,
-and drops under the same lock that governs selection and charging. The policy
-keeps the rule; the pool keeps retention. `r_remove` is a policy-layer rate for
-the same reason `b_reuse` is a policy-layer derivation — it is denominated in
-queries, and the pool does not know what a query is.
+opinion about ranking. The resolution proposed here follows the shape
+`decide_at` already established: the caller supplies the ordering, the pool owns
+the mechanics and the lock. A removal entry point would take a ranking function,
+would apply it in reverse, and would drop under the same lock that governs
+selection and charging. No such method exists yet. The policy would keep the
+rule; the pool would keep retention. `r_remove` belongs to the policy layer for
+the same reason `b_reuse` does — it is denominated in queries, and the pool does
+not know what a query is.
 
 ### Fallback threshold
 
