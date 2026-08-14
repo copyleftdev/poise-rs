@@ -18,10 +18,20 @@
 # Set POISE_REQUIRE_ISOLATION=1 to turn a missing cage into a hard failure.
 
 # Returns success when a transient user scope can actually be created.
+#
+# The probe carries every property the real invocation sets, not a
+# representative one. Property support varies by systemd version, so probing a
+# narrower set would report a cage as available and then fail at the point of
+# use -- the same mistake as testing for the `systemd-run` binary and assuming
+# the scope would build.
 bounds_isolation_available() {
   command -v systemd-run >/dev/null 2>&1 || return 1
   systemd-run --user --scope --quiet --collect \
-    -p MemoryMax=64M true >/dev/null 2>&1
+    -p CPUQuota=100% \
+    -p MemoryMax=64M \
+    -p MemorySwapMax=0 \
+    -p RuntimeMaxSec=30 \
+    true >/dev/null 2>&1
 }
 
 # bounds_run <cpu_quota> <memory_max> <timeout_seconds> <label> -- <command...>
