@@ -2,8 +2,9 @@
 allow_dirty = false
 changelog_update = true
 dependencies_update = false
-git_release_enable = true
+git_release_enable = false
 git_release_type = "auto"
+git_tag_enable = false
 publish = true
 publish_allow_dirty = false
 publish_no_verify = false
@@ -17,6 +18,9 @@ pr_name = "chore: release Poise"
 name = "poise-core"
 version_group = "poise"
 changelog_path = "CHANGELOG.md"
+git_release_enable = true
+git_tag_enable = true
+git_tag_name = "v{{ version }}"
 
 [[package]]
 name = "poise-discovery"
