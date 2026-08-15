@@ -51,4 +51,8 @@ Every stable policy should have:
 - documented time, memory, and allocation complexity;
 - behavior documented for empty sets, ineligible sets, ties, overflow,
   membership churn, and seeded randomness;
-- model-based or simulation comparison against a reference implementation.
+- comparison against a reference implementation, where the shipped code is
+  optimised away from its specification. Cached and scratch-retaining policies
+  are compared against a policy with no history; for a policy whose
+  implementation *is* its specification, a reference would be a copy and is not
+  required.

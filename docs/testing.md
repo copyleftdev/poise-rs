@@ -102,6 +102,36 @@ suite once per mutant, where three seconds would become half an hour of
 campaign time. The split keeps the sensitivity without charging every mutant
 for it.
 
+## Reference equivalence
+
+The verification bar asks for a comparison against a reference implementation.
+For most policies here that would be a copy. A reference for rendezvous is
+`argmax` over per-candidate hashes, which is what the shipped code already is,
+and a test comparing an expression to itself proves only that it was typed
+twice.
+
+The comparison has teeth where the shipped implementation is optimised away from
+its specification. `RingHash`, `Maglev`, and `BoundedLoadRendezvous` retain a
+table or a scratch buffer and rebuild it transactionally when membership
+changes. Their specification is that a decision depends on the candidates and
+the context and on nothing else, so the naive implementation of that
+specification is a policy with no history at all: `reference_equivalence.rs`
+drives one policy through twelve generations of churn and requires it to agree,
+across a key sweep, with a freshly constructed one.
+
+That targets what caching can break and nothing else — a table surviving a
+membership change it should not have, a fingerprint that missed a weight,
+scratch reused across differently shaped inputs. None of those show up in a
+single call, which is why the property suite does not catch them.
+
+Three policies are covered because three earn it. Round robin and smooth
+weighted round robin carry a cursor and per-identity credit, so their state *is*
+their behaviour and a fresh instance is a different policy rather than a
+reference for this one. The randomised policies advance an RNG per call and
+differ from a fresh instance by construction; their laws are distributional. The
+churn itself is checked, because a comparison against a cache nobody invalidated
+would hold trivially.
+
 ## Claims about the tree
 
 Every count in the prose is a claim with an expiry date nobody wrote down. This
