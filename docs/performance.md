@@ -171,7 +171,51 @@ throughput.
 
 `scripts/bench.sh` runs the in-tree benchmarks and accepts criterion's baseline
 arguments, so `--save-baseline` before a change and `--baseline` after it
-reports the regression directly. Unlike the mutation and model-checking
+reports the regression directly.
+
+## Deciding what counts as a regression
+
+Criterion tests each benchmark independently, and this workspace measures
+dozens of points. Reading those labels one at a time produces a gate nobody can
+trust, for two separate reasons.
+
+```console
+scripts/bench.sh --save-baseline before
+# make the change
+scripts/bench.sh --baseline before
+node scripts/bench-regressions.mjs
+```
+
+`bench-regressions.mjs` applies two filters and calls a regression only what
+survives both.
+
+**Holm-Bonferroni across every comparison in the run.** Testing many hypotheses
+at a five percent level means five percent of *each*, so the chance that at
+least one unchanged benchmark is labelled changed grows with the suite. The
+correction controls the family-wise rate instead, and Holm rather than plain
+Bonferroni because it is uniformly more powerful and no less valid.
+
+**An effect-size floor, defaulting to five percent.** Round robin picks in about
+five nanoseconds; an impeccably significant one percent regression there is
+fifty picoseconds. Significance answers whether a difference is real, not
+whether it matters, and only the second question should stop a merge.
+
+The second filter turns out to do most of the work, which was not the
+expectation going in. Comparing two runs of *identical* code on this machine
+produced 48 comparisons; the classifier here, testing criterion's point
+estimates against their standard errors, found 39 significant at the
+uncorrected level and 35 still significant after Holm — with a median effect of
+1.69% and nothing above 5%.
+
+Neither the classifier nor criterion is crying wolf there. A hundred samples
+with tight variance genuinely resolve sub-two-percent differences between runs,
+caused by machine state rather than by the code, and a correction designed for
+the case where no difference exists cannot suppress differences that are real
+but irrelevant. Only a magnitude threshold can.
+
+`POISE_BENCH_ALPHA` and `POISE_BENCH_MIN_EFFECT` override the defaults. Raising
+the floor is the honest response to a noisy machine; lowering alpha is not, and
+mostly buys silence rather than confidence. Unlike the mutation and model-checking
 wrappers, it applies no CPU quota, memory ceiling, or `nice` level: those bound
 a job whose cost is the problem, whereas here the measurement is the product,
 and throttling it would not produce a conservative number but a wrong one. A
