@@ -483,8 +483,10 @@ async function main() {
         problems.push(`${claim.label}: no MSRV found where the drift check looks`);
         continue;
       }
+      // A prefix must end on a component boundary. Without the dot, a declared
+      // 1.85 accepts 1.850.0, and a declared 1.85.1 accepts 1.85.10.
       const agrees = claim.prefix
-        ? claim.value.startsWith(declared)
+        ? claim.value === declared || claim.value.startsWith(`${declared}.`)
         : claim.value === declared;
       if (!agrees) {
         problems.push(
@@ -531,6 +533,18 @@ async function main() {
       if (!listed.includes(context)) {
         problems.push(
           `docs/releasing.md omits "${context}", which protect-main.sh requires`,
+        );
+      }
+    }
+    // The remaining direction, and the one whose absence is silent: a job in a
+    // gating workflow that nothing requires still runs, still reports, and no
+    // longer gates. Dropping it from the script and the chapter together would
+    // otherwise leave every other check agreeing.
+    for (const context of defined) {
+      if (!requiredSet.has(context)) {
+        problems.push(
+          `.github/workflows defines "${context}", which protect-main.sh does not ` +
+            "require, so it runs without gating",
         );
       }
     }

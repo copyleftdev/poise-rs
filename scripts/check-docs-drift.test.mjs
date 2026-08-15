@@ -286,3 +286,16 @@ test("an MSRV bump left half-applied is caught", () => {
   const matrix = claims.find((claim) => claim.label === "CI matrix");
   assert.ok(matrix.value.startsWith(declared), "the matrix pins a patch release");
 });
+
+test("an MSRV prefix must end on a component boundary", () => {
+  // Without the boundary, a declared 1.85 accepts 1.850.0 and a declared
+  // 1.85.1 accepts 1.85.10 -- distinct versions that share a text prefix.
+  const boundary = (declared, value) =>
+    value === declared || value.startsWith(`${declared}.`);
+
+  assert.ok(boundary("1.85", "1.85"));
+  assert.ok(boundary("1.85", "1.85.0"));
+  assert.ok(!boundary("1.85", "1.850.0"));
+  assert.ok(!boundary("1.85.1", "1.85.10"));
+  assert.ok(!boundary("1.85", "1.9"));
+});
