@@ -60,11 +60,19 @@ jobs:
       - name: Install pinned mutation runner
         run: cargo install cargo-mutants --version 27.0.0 --locked
 
+      # The campaign takes about forty minutes on a hosted runner and grew into
+      # its own step timeout: run 31847817773 caught every terminating mutant
+      # and was killed in the same second it said so, publishing a failure for a
+      # gate that had passed. The wrapper's own deadline is set below the step's
+      # so an overrun is reported as an overrun, with the limit named, rather
+      # than as an opaque cancellation.
       - name: Complete mutation gate
         id: mutation
         continue-on-error: true
-        timeout-minutes: 40
-        run: scripts/mutants-core.sh --jobs 1
+        timeout-minutes: 75
+        env:
+          POISE_MUTANTS_TIMEOUT: "4200"
+        run: scripts/mutants-core.sh
 
       - name: Install pinned mdBook
         run: cargo install mdbook --version 0.5.2 --locked
