@@ -3,6 +3,8 @@ import test from "node:test";
 
 import {
   checkSum,
+  localLinks,
+  referencedPaths,
   countLoomModels,
   countProptestLaws,
   countTestAttributes,
@@ -142,4 +144,42 @@ async fn async_configured() {}
 test("attributes that merely mention test are not counted", () => {
   const source = "#[cfg(test)]\nmod tests {}\n#[should_panic]\nfn nope() {}";
   assert.equal(countTestAttributes([source]), 0);
+});
+
+test("local links are extracted and external ones ignored", () => {
+  const document = [
+    "[chapter](docs/architecture.md)",
+    "[anchored](docs/testing.md#gates)",
+    "[external](https://example.com/docs/thing.md)",
+    "[bare anchor](#section)",
+    "[angle](<docs/spaced name.md>)",
+  ].join("\n");
+
+  assert.deepEqual(localLinks(document), [
+    "docs/architecture.md",
+    "docs/testing.md",
+    "docs/spaced name.md",
+  ]);
+});
+
+test("paths inside fenced code are found, since that is where commands live", () => {
+  // The book validator strips fences before checking links, so a chapter
+  // telling a reader to run a renamed script is exactly the claim it misses.
+  const document = "```console\nscripts/bench.sh --baseline before\n```";
+  assert.deepEqual(referencedPaths(document), ["scripts/bench.sh"]);
+});
+
+test("paths inside URLs are not treated as repository paths", () => {
+  const document = "see https://github.com/owner/repo/docs/architecture.md for more";
+  assert.deepEqual(referencedPaths(document), []);
+});
+
+test("globs name a set rather than a file and are skipped", () => {
+  const document = "run `node --test scripts/*.test.mjs` and read docs/*.md";
+  assert.deepEqual(referencedPaths(document), []);
+});
+
+test("trailing punctuation is not taken as part of the path", () => {
+  const document = "Configured by scripts/protect-main.sh, then reviewed.";
+  assert.deepEqual(referencedPaths(document), ["scripts/protect-main.sh"]);
 });

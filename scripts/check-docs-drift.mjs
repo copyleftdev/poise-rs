@@ -22,10 +22,20 @@
 // -- a breakdown that no longer sums to its own total is drift that arithmetic
 // can catch without rerunning anything.
 
-import { readdir, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import { extname, join, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
+
+/** Whether a path exists, without distinguishing files from directories. */
+async function exists(path) {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** Every file under `directory` with one of `extensions`. */
 async function walk(directory, extensions) {
@@ -144,6 +154,40 @@ export function statedValue(document, { file, pattern, label }) {
   return matches[0][1];
 }
 
+
+/**
+ * Markdown links to files in this repository, with any fragment removed.
+ *
+ * External URLs and bare anchors are somebody else's problem: the first cannot
+ * be checked offline, and the second is already covered for chapters by the
+ * book validator.
+ */
+export function localLinks(document) {
+  // The angle-bracket form is valid Markdown and permits spaces in the path,
+  // so it cannot share the whitespace-terminated pattern with the bare form.
+  return [...document.matchAll(/!?\[[^\]]*\]\(\s*(?:<([^>]*)>|([^)\s]+))/g)]
+    .map((match) => (match[1] ?? match[2]).trim())
+    .filter((target) => target && !/^(?:[a-z][a-z+.-]*:|\/\/|#)/i.test(target))
+    .map((target) => (target.includes("#") ? target.slice(0, target.indexOf("#")) : target))
+    .filter(Boolean);
+}
+
+/**
+ * Repository paths named anywhere in a document, fenced code included.
+ *
+ * The book validator strips fenced blocks before checking links, which is right
+ * for links and wrong for this: a chapter telling a reader to run a script is
+ * making a claim about the tree, and it is the claim most likely to rot after a
+ * rename. Globs are skipped because they name a set rather than a file.
+ */
+export function referencedPaths(document) {
+  const roots = "scripts|crates|docs|fuzz|book-theme|site";
+  const pattern = new RegExp(String.raw`(?<![\w/.-])((?:${roots})/[\w./-]*[\w/])`, "g");
+  return [...document.matchAll(pattern)]
+    .map((match) => match[1])
+    .filter((path) => !path.includes("*") && !path.includes("?"));
+}
+
 /** Checks that a stated breakdown still sums to its stated total. */
 export function checkSum(label, total, parts) {
   const sum = parts.reduce((running, part) => running + part.value, 0);
@@ -246,6 +290,42 @@ async function main() {
     }
   }
 
+  // Documents outside docs/ that the book validator never sees, plus the
+  // chapters themselves for the fenced references it strips.
+  const prose = [
+    "README.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
+    "CHANGELOG.md",
+    ...(await walk(join(root, "docs"), [".md"])).map((path) =>
+      path.slice(root.length + 1),
+    ),
+  ];
+
+  let links = 0;
+  let references = 0;
+  for (const file of prose) {
+    const document = await readFile(join(root, file), "utf8").catch(() => null);
+    if (document === null) {
+      problems.push(`${file}: listed for checking but absent`);
+      continue;
+    }
+    for (const target of localLinks(document)) {
+      links += 1;
+      const resolved = resolve(join(root, file), "..", target);
+      if (!(await exists(resolved))) {
+        problems.push(`${file}: links to ${target}, which does not exist`);
+      }
+    }
+    for (const target of referencedPaths(document)) {
+      references += 1;
+      if (!(await exists(join(root, target)))) {
+        problems.push(`${file}: names ${target}, which does not exist`);
+      }
+    }
+  }
+
   if (problems.length > 0) {
     console.error("documentation drifted from the tree it describes:");
     for (const problem of problems) {
@@ -255,8 +335,9 @@ async function main() {
   }
 
   console.log(
-    `documentation matches the tree: ${claims.length} counted claims and the ` +
-      "recorded campaign breakdown",
+    `documentation matches the tree: ${claims.length} counted claims, ` +
+      `${links} local links, ${references} named paths, and the recorded ` +
+      "campaign breakdown",
   );
 }
 

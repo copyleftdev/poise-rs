@@ -117,6 +117,13 @@ a failure, and so is a claim stated twice: a checker that quietly stops checking
 is worse than no checker, and a duplicated claim leaves a stale copy behind
 every correction.
 
+It also resolves every local link and every repository path the prose names.
+Links in `docs/` are already validated by the book check, but README and the
+root documents are outside it, and fenced code is stripped before that check
+runs — so a chapter telling a reader to run a script is precisely the claim
+nothing verified. That is the claim most likely to rot after a rename, and the
+one a reader hits first.
+
 Some claims cannot be derived by a script that does not run the campaign
 producing them. The recorded mutation results are checked for internal
 consistency instead — a breakdown that no longer sums to its own total is drift
