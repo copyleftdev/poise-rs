@@ -47,7 +47,8 @@ pub use load::{
 };
 pub use policy_trait::{Policy, PolicyExt};
 pub use probe::{
-    ProbeDecisionError, ProbeEntry, ProbePool, ProbePoolConfig, ProbePoolConfigError, ProbeReading,
+    ProbeDecision, ProbeDecisionError, ProbeEntry, ProbePool, ProbePoolConfig,
+    ProbePoolConfigError, ProbeReading,
 };
 pub use selection::Selection;
 pub use weight::{InvalidWeight, Weight};

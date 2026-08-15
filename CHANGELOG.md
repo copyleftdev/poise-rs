@@ -15,7 +15,13 @@ Project development can be supported through
 
 - `ProbePool`, a bounded and self-expiring pool of out-of-band replica
   observations, with `ProbePoolConfig`, `ProbeReading`, `ProbeEntry`, and typed
-  configuration and decision errors. Selection and reuse charging happen under
+  configuration and decision errors.
+- `ProbePool::decide_among`, which selects against a candidate slice: it offers
+  a ranking function only the observations naming eligible present candidates,
+  and returns a `ProbeDecision` carrying that candidate's position. The bare
+  `decide` hands over every retained observation and leaves eligibility
+  filtering to the caller, which is silently omissible and routes traffic to a
+  departed replica when omitted. Selection and reuse charging happen under
   one lock so concurrent selectors cannot overspend a single observation.
 - Loom models over concurrent probe-pool consumption and a `probe_pool` fuzz
   target covering record, expire, and select interleavings.

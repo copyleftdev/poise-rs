@@ -2,7 +2,8 @@
 
 **Status: partially implemented.** The probe pool described under
 [Probe pool contract](#probe-pool-contract) exists in `poise-core` as
-[`ProbePool`](api-map.md). No `Prequal` policy type exists: the hot-cold
+[`ProbePool`](api-map.md), including the candidate-aware selection described
+under [Selecting against a candidate set](#selecting-against-a-candidate-set). No `Prequal` policy type exists: the hot-cold
 lexicographic rule, the decision type, and the fallback behavior remain
 proposals. Nothing in this chapter has appeared in a released crate.
 
@@ -416,6 +417,53 @@ What remains in scope is small and concrete: the hot-cold rule as a selection
 policy alongside the other thirteen, and the retention mechanics the rule
 depends on.
 
+## Selecting against a candidate set
+
+Membership being the caller's does not mean the composition should be the
+caller's to get right unaided. `decide_at` hands a ranking function every
+retained observation, including ones naming replicas that have since drained or
+left, and filtering them is documented as the caller's responsibility. That
+responsibility is silently omissible, and omitting it routes traffic to a
+departed replica — the exact hazard the retention contract warns about, with
+nothing in the signature to prevent it. Every caller then writes the same
+filter, and afterwards searches the candidate slice to turn the returned
+observation back into something dispatchable.
+
+`ProbePool::decide_among_at` takes the candidate slice and does that work. It
+intersects unexpired observations with the candidates by identity, drops any
+that are not eligible, and offers the ranking function only what is left. The
+decision carries the chosen candidate's position, so nothing maps back:
+
+```rust
+let decision = pool.decide_among(&candidates, |observed| {
+    observed
+        .iter()
+        .enumerate()
+        .min_by_key(|(_, entry)| entry.requests_in_flight())
+        .map(|(index, _)| index)
+})?;
+dispatch(&candidates[decision.selection().index()]);
+```
+
+The closure now expresses only the ranking, which is the part that is actually
+the policy.
+
+This is not the pool acquiring a membership model, which the section above rules
+out. It caches no candidate set, tracks no generation, and defines no
+eligibility of its own — it asks `Candidate::is_eligible`, which the caller's
+type implements, and compares against the slice handed to it at the moment of
+the call. It owns no opinion; it declines to offer a footgun.
+
+That also settles what looked like an open question about keying. Identity is
+compared at decision time against the slice the caller passed, so an entry
+naming a replica that has left is invisible without any keying scheme,
+generation tracking, or staleness rule. `decide_at` remains for callers who want
+the unfiltered view.
+
+Cold start stays the caller's to handle, deliberately. The paper falls back
+below an occupancy of two rather than at emptiness, and `len_at` reports
+occupancy so a caller can implement that threshold; the pool does not choose one.
+
 ## The one open API question
 
 Degradation is a retention property, so it belongs to the pool if it belongs
@@ -424,10 +472,10 @@ first, and what accumulates is a pool describing the fleet as busier than it is.
 Removing the worst entry needs a ranking, which the pool does not have and
 should not acquire.
 
-The shape that fits is the one `decide_at` already established: a removal entry
-point taking the caller's ranking, applied in reverse, under the same lock. That
-is the only addition to the pool's surface this chapter proposes. Pacing it
-stays outside, for the reason above.
+The shape that fits is the one `decide_at` and `decide_among_at` established: a
+removal entry point taking the caller's ranking, applied in reverse, under the
+same lock. That is the only remaining addition to the pool's surface this
+chapter proposes. Pacing it stays outside, for the reason above.
 
 ## References
 

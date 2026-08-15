@@ -50,6 +50,7 @@ dependencies.
 | `ProbePoolConfig`, `ProbePoolConfigError` | Capacity, reuse, and age bounds |
 | `ProbeReading` | One reported queue depth and observed latency |
 | `ProbeEntry` | A retained observation and its remaining reuse budget |
+| `ProbeDecision` | A selection against a candidate slice, and the observation behind it |
 | `ProbeDecisionError` | Absent, rejected, and out-of-bounds decision outcomes |
 
 ## `poise-discovery`
