@@ -102,6 +102,28 @@ suite once per mutant, where three seconds would become half an hour of
 campaign time. The split keeps the sensitivity without charging every mutant
 for it.
 
+## Claims about the tree
+
+Every count in the prose is a claim with an expiry date nobody wrote down. This
+repository has shipped several past theirs: ten Loom models when there were
+thirteen, 240 test entry points when there were 259, 642 mutation sites when
+there were 705, and a performance chapter still calling criterion baselines a
+roadmap item after they had landed. Each was accurate when written, which is the
+whole difficulty — prose drifts silently, and stays readable while doing it.
+
+`scripts/check-docs-drift.mjs` counts the derivable claims from the source and
+fails when the prose disagrees. A claim whose pattern no longer matches is also
+a failure, and so is a claim stated twice: a checker that quietly stops checking
+is worse than no checker, and a duplicated claim leaves a stale copy behind
+every correction.
+
+Some claims cannot be derived by a script that does not run the campaign
+producing them. The recorded mutation results are checked for internal
+consistency instead — a breakdown that no longer sums to its own total is drift
+arithmetic can catch. Counts fixed at compile time, such as the metrics
+cardinality, are asserted in the crate that owns them rather than scraped, since
+that is where a change to them happens.
+
 Property testing is one verification layer, not a replacement for mutation,
 fuzz, model-checking, benchmark, simulation, and coverage gates. The mutation
 policy and reproducible `poise-core` campaign are documented in
