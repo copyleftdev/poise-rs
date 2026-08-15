@@ -62,18 +62,20 @@ estimate is centred on the boundary and falls short as often as it clears it, so
 the sample must place that deviation `Z + Z_power` standard deviations out:
 
 ```text
-n >= (Z + Z_power)^2 * (1 - p) / (relative^2 * p)
+n >= margin * (Z * sqrt(p(1-p)) + Z_power * sqrt(q(1-q)))^2 / (q - p)^2
 ```
 
-`Z` is 6.8 and `Z_power` is 1.645, a ninety-five percent one-sided detection
-target, which costs about 1.5 times the samples that a fifty percent target
-would. The variance under the rejection term is the null's and under the power
-term the alternative's; using the null's for both is tidier and lands below the
-required count.
+where `q = p(1 + relative)` is the deviation being detected. `Z` is 6.8 and
+`Z_power` is 1.645, a ninety-five percent one-sided detection target, which
+costs about 1.5 times the samples a fifty percent target would.
+
+Each term carries the variance belonging to its own hypothesis: the null's under
+the rejection threshold, the alternative's under the power term. Using the
+null's for both is tidier, and lands below the required count.
 
 Sizing is checked against an exact one-proportion power calculation performed
 outside this repository. That check is what found the tidier expression sitting
-0.15% to 0.40% short — always short, never over, which is how a stated
+0.15% to 0.66% short — always short, never over, which is how a stated
 sensitivity decays into a slogan. The size now carries a two percent margin,
 wider than the disagreement between standard forms, and a test holds it between
 the requirement and a tenth above it so the margin cannot grow to cover a real
