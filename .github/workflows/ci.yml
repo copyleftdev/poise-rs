@@ -80,6 +80,14 @@ jobs:
         run: cargo test --locked -p poise-core --test property_affinity
       - name: Topology laws
         run: cargo test --locked -p poise-core --test property_topology
+      # Ignored by default and run here in release. The samples run to millions,
+      # which costs tens of milliseconds optimized and about three seconds
+      # unoptimized -- and the mutation campaign runs the unoptimized suite once
+      # per mutant, where three seconds becomes half an hour.
+      - name: Distribution sensitivity
+        run: >-
+          cargo test --locked --release -p poise-core
+          --test distribution_power -- --ignored
 
   loom:
     name: Exhaustive scheduler models
