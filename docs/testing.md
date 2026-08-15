@@ -130,6 +130,20 @@ runs — so a chapter telling a reader to run a script is precisely the claim
 nothing verified. That is the claim most likely to rot after a rename, and the
 one a reader hits first.
 
+Facts stated in more than one place get checked against each other rather than
+against nothing. The required CI checks are one fact with three copies — the
+workflow defines the job names, `scripts/protect-main.sh` requires them, and
+[releasing](releasing.md) lists them — and renaming a job desynchronises the
+other two silently, at which point a required context that no longer reports
+blocks every merge or a job quietly stops gating. The comparison runs in every
+direction, including the one whose absence is silent: a job defined in a gating
+workflow that nothing requires still runs and still reports, so dropping it from
+the script and the chapter together would otherwise leave every remaining check
+agreeing with itself. The MSRV is one fact with
+five: the manifest declares it, a badge shows it, the README says it, the test
+matrix pins it, and protection names the resulting job. The manifest is the only
+copy a compiler enforces, so it is the source and the rest are compared to it.
+
 Some claims cannot be derived by a script that does not run the campaign
 producing them. The recorded mutation results are checked for internal
 consistency instead — a breakdown that no longer sums to its own total is drift

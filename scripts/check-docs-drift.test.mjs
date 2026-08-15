@@ -3,14 +3,18 @@ import test from "node:test";
 
 import {
   checkSum,
+  documentedContexts,
   ignoredPaths,
   localLinks,
+  msrvClaims,
+  protectedContexts,
   referencedPaths,
   countLoomModels,
   countProptestLaws,
   countTestAttributes,
   spell,
   statedValue,
+  workflowJobNames,
 } from "./check-docs-drift.mjs";
 
 test("test attributes are counted across sources", () => {
@@ -199,4 +203,99 @@ test("generated paths are reported as skipped rather than silently dropped", asy
 
 test("asking about no paths does not shell out", async () => {
   assert.equal((await ignoredPaths([])).size, 0);
+});
+
+test("job names are read at job indentation, not step indentation", () => {
+  const workflow = [
+    "jobs:",
+    "  quality:",
+    "    name: Format, lint, and docs",
+    "    steps:",
+    "      - name: A step that is not a job",
+    "  book:",
+    "    name: Documentation book",
+  ].join("\n");
+
+  assert.deepEqual(workflowJobNames(workflow), [
+    "Format, lint, and docs",
+    "Documentation book",
+  ]);
+});
+
+test("a matrix job expands into the contexts it actually produces", () => {
+  // Branch protection names the expanded contexts, so an unexpanded name would
+  // never match anything and the check would be comparing a template.
+  const workflow = [
+    "jobs:",
+    "  test:",
+    "    name: Test / Rust ${{ matrix.toolchain }}",
+    "    strategy:",
+    "      matrix:",
+    "        toolchain: [stable, 1.85.0]",
+  ].join("\n");
+
+  assert.deepEqual(workflowJobNames(workflow), [
+    "Test / Rust stable",
+    "Test / Rust 1.85.0",
+  ]);
+});
+
+test("protected contexts are read from the script's own payload", () => {
+  const script = [
+    "gh api --method PUT foo --input - <<'JSON'",
+    '{"required_status_checks":{"strict":true,"contexts":["One","Two"]}}',
+    "JSON",
+  ].join("\n");
+
+  assert.deepEqual(protectedContexts(script), ["One", "Two"]);
+});
+
+test("a protection script the check can no longer read is an error", () => {
+  // Silently finding nothing to compare would leave protection unchecked while
+  // the gate still reported success.
+  assert.throws(() => protectedContexts("gh api --method PUT foo"), /no longer embeds/);
+});
+
+test("a chapter that stops listing the jobs is an error", () => {
+  assert.throws(() => documentedContexts("# Releasing\n\nNo list here.\n"), /no longer lists/);
+});
+
+test("the documented job list is read as written", () => {
+  const chapter = [
+    "Protect `main` with required pull requests and these CI jobs:",
+    "",
+    "- One",
+    "- Two",
+    "",
+    "Then do something else.",
+  ].join("\n");
+
+  assert.deepEqual(documentedContexts(chapter), ["One", "Two"]);
+});
+
+test("an MSRV bump left half-applied is caught", () => {
+  const { declared, claims } = msrvClaims({
+    manifest: 'rust-version = "1.85"\n',
+    readme: "MSRV-1.90 badge\nMinimum supported Rust version: **1.85**\n",
+    workflow: "        toolchain: [stable, 1.85.0]\n",
+  });
+
+  assert.equal(declared, "1.85");
+  const badge = claims.find((claim) => claim.label === "README badge");
+  assert.equal(badge.value, "1.90");
+  const matrix = claims.find((claim) => claim.label === "CI matrix");
+  assert.ok(matrix.value.startsWith(declared), "the matrix pins a patch release");
+});
+
+test("an MSRV prefix must end on a component boundary", () => {
+  // Without the boundary, a declared 1.85 accepts 1.850.0 and a declared
+  // 1.85.1 accepts 1.85.10 -- distinct versions that share a text prefix.
+  const boundary = (declared, value) =>
+    value === declared || value.startsWith(`${declared}.`);
+
+  assert.ok(boundary("1.85", "1.85"));
+  assert.ok(boundary("1.85", "1.85.0"));
+  assert.ok(!boundary("1.85", "1.850.0"));
+  assert.ok(!boundary("1.85.1", "1.85.10"));
+  assert.ok(!boundary("1.85", "1.9"));
 });
