@@ -164,8 +164,11 @@ Poise treats behavioral laws as public API.
 - **Mutation testing** requires every terminating viable `poise-core` mutation
   to be caught. The recorded full campaign examined 705 sites with zero viable
   survivors; watchdog-detected nontermination remains visible.
-- **Ten Loom models** exhaustively explore scheduler interleavings around
+- **Thirteen Loom models** exhaustively explore scheduler interleavings around
   in-flight accounting, probe-pool consumption, and health state transitions.
+  Three of them check linearizability against a sequential reference rather
+  than a counting invariant, which is what distinguishes a lost update from a
+  legal interleaving.
 - **MSRV verification** runs the workspace and all features on Rust 1.85.
 - **Doctests, strict Clippy, rustfmt, rustdoc, dependency policy, and package
   dry-runs** are release gates.
