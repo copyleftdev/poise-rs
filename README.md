@@ -157,7 +157,7 @@ For the full boundary model, read [Architecture](docs/architecture.md), the
 
 Poise treats behavioral laws as public API.
 
-- **294 authored test entry points** cover examples, edge conditions,
+- **298 authored test entry points** cover examples, edge conditions,
   distributions, concurrency, cancellation, and transactional failure.
 - **14 Proptest laws** run 256 generated cases each by default and shrink
   failures into committed regression seeds.
