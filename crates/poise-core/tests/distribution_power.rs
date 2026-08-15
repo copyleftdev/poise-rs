@@ -48,22 +48,46 @@ const THRESHOLD_SIGMA: f64 = 6.8;
 /// one-sided, which is the direction a bias moves a bin.
 const POWER_SIGMA: f64 = 1.645;
 
+/// Margin over the computed size, absorbing the spread between standard forms.
+///
+/// Several textbook expressions approximate a binomial power calculation and
+/// they disagree by a fraction of a percent. Checked against an independent
+/// exact implementation, the expression below lands between 0.15% and 0.40%
+/// *under* the required count, and always under rather than over. A systematic
+/// shortfall is precisely the quiet erosion the power assertion exists to
+/// prevent, so the size carries a margin wider than the observed disagreement.
+/// Two percent of a two-million-draw sample is milliseconds.
+const SAFETY_MARGIN: f64 = 1.02;
+
 /// Smallest sample size that detects a `relative` deviation at the target power.
 ///
-/// Rejection needs `Z * sigma <= relative * n * p`; detecting a deviation of
-/// exactly that size ninety-five percent of the time needs the deviation to sit
-/// `Z + Z_power` sigma out instead, which solves to
-/// `n >= (Z + Z_power)^2 (1 - p) / (relative^2 * p)`. The binding bin is the
-/// least likely one, so the caller passes the smallest probability.
+/// The standard two-proportion form, with the null variance under the rejection
+/// threshold and the alternative's variance under the power term:
+///
+/// ```text
+/// n >= (Z * sqrt(p(1-p)) + Z_power * sqrt(q(1-q)))^2 / (q - p)^2,  q = p(1 + relative)
+/// ```
+///
+/// Using the null variance for both terms, which is the tidier expression, is
+/// what put this below the required count before it was checked. The binding
+/// bin is the least likely one, so the caller passes the smallest probability.
 fn required_samples(smallest_probability: f64, relative: f64) -> u64 {
     assert!(
         smallest_probability > 0.0 && relative > 0.0,
         "a sample size is only defined for a positive probability and tolerance"
     );
-    let detectable = THRESHOLD_SIGMA + POWER_SIGMA;
-    let numerator = detectable * detectable * (1.0 - smallest_probability);
-    let denominator = relative * relative * smallest_probability;
-    let samples = (numerator / denominator).ceil();
+    let null = smallest_probability;
+    let alternative = null * (1.0 + relative);
+    assert!(
+        alternative < 1.0,
+        "a relative deviation of {relative} takes probability {null} past one"
+    );
+
+    let separation = alternative - null;
+    let spread = THRESHOLD_SIGMA * (null * (1.0 - null)).sqrt()
+        + POWER_SIGMA * (alternative * (1.0 - alternative)).sqrt();
+    let samples = (spread * spread / (separation * separation) * SAFETY_MARGIN).ceil();
+
     assert!(
         samples.is_finite() && samples < 1e15,
         "required sample size {samples} is not a workable count"
@@ -79,27 +103,25 @@ fn required_samples(smallest_probability: f64, relative: f64) -> u64 {
 ///
 /// The power assertion is the point. Without it this is the same
 /// hand-picked-band test with more arithmetic: a future change that shrinks the
-/// sample would silently widen the tolerance instead of failing.
+/// sample would silently widen the tolerance instead of failing. It is stated
+/// against `required_samples` rather than restating the criterion, so the
+/// sizing rule and the check on it cannot drift apart.
 fn assert_distribution(label: &str, counts: &[u64], probabilities: &[f64], relative: f64) {
     let total: u64 = counts.iter().sum();
     let samples = total as f64;
+    let smallest = probabilities.iter().copied().fold(f64::INFINITY, f64::min);
+    let needed = required_samples(smallest, relative);
+
+    assert!(
+        total >= needed,
+        "{label}: {total} samples cannot detect a {:.3}% deviation at the target \
+         power, which needs {needed}",
+        100.0 * relative
+    );
 
     for (index, (count, probability)) in counts.iter().zip(probabilities).enumerate() {
         let expected = probability * samples;
         let sigma = (samples * probability * (1.0 - probability)).sqrt();
-
-        // The same combined threshold the sample size was derived from. Checking
-        // only the rejection boundary here would accept a sample with fifty
-        // percent power, which is the defect this margin exists to prevent.
-        let detectable = THRESHOLD_SIGMA + POWER_SIGMA;
-        assert!(
-            detectable * sigma <= relative * expected,
-            "{label}: bin {index} is underpowered -- {total} samples detect \
-             {:.3}% at {detectable} sigma, short of the {:.3}% this test claims",
-            100.0 * detectable * sigma / expected,
-            100.0 * relative
-        );
-
         let deviation = (*count as f64 - expected) / sigma;
         assert!(
             deviation.abs() < THRESHOLD_SIGMA,
@@ -274,7 +296,7 @@ fn weighted_rendezvous_spreads_the_keyspace_by_weight() {
 /// the failure would only appear later, as a test that had quietly stopped
 /// detecting anything.
 #[test]
-#[should_panic(expected = "underpowered")]
+#[should_panic(expected = "cannot detect")]
 fn an_undersized_sample_is_rejected_rather_than_tolerated() {
     let counts = [500_u64, 500];
     assert_distribution("deliberately tiny", &counts, &[0.5, 0.5], 0.01);
@@ -297,4 +319,42 @@ fn a_biased_sample_is_rejected() {
     let skew = half / 50;
     let counts = [half + skew, half - skew];
     assert_distribution("deliberately biased", &counts, &[0.5, 0.5], 0.01);
+}
+
+/// Sizing stays at or above an independently computed requirement.
+///
+/// The reference counts come from an exact one-proportion power calculation
+/// performed outside this repository, at the same threshold and power target.
+/// They are recorded rather than recomputed because the point is to disagree
+/// with this file's arithmetic if it drifts, which a second copy of the same
+/// expression could not do.
+///
+/// The expression here was 0.15% to 0.40% *below* these before the margin was
+/// added, always short and never over, which is how a stated sensitivity decays
+/// into a slogan.
+#[test]
+fn sizing_meets_an_independently_computed_requirement() {
+    // (smallest probability, relative deviation, exact required samples)
+    let references = [
+        (1.0 / 3.0, 0.01, 1_429_852_u64),
+        (0.25, 0.01, 2_146_569),
+        (0.2, 0.01, 2_863_287),
+        (0.1, 0.01, 6_446_873),
+        (0.25, 0.02, 538_403),
+    ];
+
+    for (probability, relative, exact) in references {
+        let computed = required_samples(probability, relative);
+        assert!(
+            computed >= exact,
+            "p={probability}, r={relative}: sized {computed} against a requirement of {exact}"
+        );
+        // Generous is fine, wasteful is not: a sample far above the requirement
+        // would mean the margin had swallowed a real error in the expression.
+        assert!(
+            computed <= exact * 11 / 10,
+            "p={probability}, r={relative}: sized {computed}, more than a tenth \
+             above the {exact} required"
+        );
+    }
 }

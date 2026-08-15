@@ -67,7 +67,17 @@ n >= (Z + Z_power)^2 * (1 - p) / (relative^2 * p)
 
 `Z` is 6.8 and `Z_power` is 1.645, a ninety-five percent one-sided detection
 target, which costs about 1.5 times the samples that a fifty percent target
-would. An underpowered test fails
+would. The variance under the rejection term is the null's and under the power
+term the alternative's; using the null's for both is tidier and lands below the
+required count.
+
+Sizing is checked against an exact one-proportion power calculation performed
+outside this repository. That check is what found the tidier expression sitting
+0.15% to 0.40% short — always short, never over, which is how a stated
+sensitivity decays into a slogan. The size now carries a two percent margin,
+wider than the disagreement between standard forms, and a test holds it between
+the requirement and a tenth above it so the margin cannot grow to cover a real
+error. An underpowered test fails
 as loudly as a biased sampler, so sensitivity cannot decay quietly as the code
 around it changes. Two further tests check the checker, one supplying a sample
 too small and one a bias just past the claimed resolution.
