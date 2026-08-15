@@ -223,6 +223,100 @@ export function referencedPaths(document) {
     .filter((path) => !path.includes("*") && !path.includes("?"));
 }
 
+
+/**
+ * Job names a workflow defines, with any matrix expanded.
+ *
+ * Job names are the contexts branch protection requires, so they are one fact
+ * with three copies in this repository: the workflow that defines them, the
+ * protection script that requires them, and the release chapter that lists
+ * them. Renaming a job silently desynchronises the other two, and the
+ * consequence is not cosmetic -- a required context that no longer reports
+ * blocks every merge, and a job that quietly stops being required stops
+ * gating.
+ *
+ * Deliberately narrow parsing rather than a YAML dependency: a job name is a
+ * `name:` at job indentation, which a step's `- name:` is not.
+ */
+export function workflowJobNames(workflow) {
+  const names = [...workflow.matchAll(/^ {4}name: (.+)$/gm)].map((match) =>
+    match[1].trim().replace(/^["']|["']$/g, ""),
+  );
+
+  return names.flatMap((name) => {
+    const matrix = name.match(/\$\{\{\s*matrix\.(\w+)\s*\}\}/);
+    if (!matrix) {
+      return [name];
+    }
+    const values = workflow.match(
+      new RegExp(String.raw`^\s*${matrix[1]}: \[([^\]]*)\]`, "m"),
+    );
+    if (!values) {
+      return [name];
+    }
+    return values[1]
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .map((value) => name.replace(matrix[0], value));
+  });
+}
+
+/**
+ * The workspace MSRV, and every place the prose or CI restates it.
+ *
+ * One fact with five copies: the manifest declares it, a badge shows it, the
+ * README says it, the test matrix pins it, and branch protection names the
+ * resulting job. The manifest is the only one a compiler enforces, so it is the
+ * source and the rest are checked against it.
+ */
+export function msrvClaims({ manifest, readme, workflow }) {
+  const declared = manifest.match(/^rust-version = "([\d.]+)"$/m)?.[1];
+  if (!declared) {
+    throw new Error("Cargo.toml declares no rust-version for the drift check to compare");
+  }
+  const claims = [
+    { label: "README badge", value: readme.match(/MSRV-([\d.]+)/)?.[1] },
+    {
+      label: "README text",
+      value: readme.match(/Minimum supported Rust version: \*\*([\d.]+)\*\*/)?.[1],
+    },
+    // The matrix pins a patch release, so it must start with the declared
+    // version rather than equal it.
+    { label: "CI matrix", value: workflow.match(/toolchain: \[stable, ([\d.]+)\]/)?.[1], prefix: true },
+  ];
+  return { declared, claims };
+}
+
+/** Status-check contexts the protection script requires. */
+export function protectedContexts(script) {
+  const json = script.match(/<<'JSON'\n([\s\S]*?)\nJSON/);
+  if (!json) {
+    throw new Error(
+      "scripts/protect-main.sh no longer embeds a JSON payload the drift check " +
+        "can read; update the pattern alongside the script",
+    );
+  }
+  return JSON.parse(json[1]).required_status_checks.contexts;
+}
+
+/** Checks the release chapter lists exactly the required contexts. */
+export function documentedContexts(chapter) {
+  const section = chapter.match(
+    /Protect `main` with required pull requests and these CI jobs:\n\n((?:- .+\n)+)/,
+  );
+  if (!section) {
+    throw new Error(
+      "docs/releasing.md no longer lists the required CI jobs where the drift " +
+        "check looks; update the pattern alongside the prose",
+    );
+  }
+  return section[1]
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => line.replace(/^- /, "").trim());
+}
+
 /** Checks that a stated breakdown still sums to its stated total. */
 export function checkSum(label, total, parts) {
   const sum = parts.reduce((running, part) => running + part.value, 0);
@@ -377,6 +471,73 @@ async function main() {
     }
   }
 
+  // One fact, five copies: manifest, badge, prose, test matrix, required job.
+  try {
+    const { declared, claims } = msrvClaims({
+      manifest: await readFile(join(root, "Cargo.toml"), "utf8"),
+      readme: await readFile(join(root, "README.md"), "utf8"),
+      workflow: await readFile(join(root, ".github/workflows/ci.yml"), "utf8"),
+    });
+    for (const claim of claims) {
+      if (claim.value === undefined) {
+        problems.push(`${claim.label}: no MSRV found where the drift check looks`);
+        continue;
+      }
+      const agrees = claim.prefix
+        ? claim.value.startsWith(declared)
+        : claim.value === declared;
+      if (!agrees) {
+        problems.push(
+          `${claim.label} says MSRV ${claim.value}, Cargo.toml declares ${declared}`,
+        );
+      }
+    }
+  } catch (error) {
+    problems.push(error.message);
+  }
+
+  // One fact, three copies: the workflows define the job names, the protection
+  // script requires them, and the release chapter lists them.
+  const workflows = await Promise.all(
+    ["ci.yml", "security.yml"].map((file) =>
+      readFile(join(root, ".github/workflows", file), "utf8"),
+    ),
+  );
+  const defined = new Set(workflows.flatMap(workflowJobNames));
+  let contexts = 0;
+  try {
+    const required = protectedContexts(
+      await readFile(join(root, "scripts/protect-main.sh"), "utf8"),
+    );
+    const listed = documentedContexts(await readFile(join(root, "docs/releasing.md"), "utf8"));
+    contexts = required.length;
+
+    for (const context of required) {
+      if (!defined.has(context)) {
+        problems.push(
+          `scripts/protect-main.sh requires "${context}", which no workflow defines`,
+        );
+      }
+    }
+    const requiredSet = new Set(required);
+    for (const context of listed) {
+      if (!requiredSet.has(context)) {
+        problems.push(
+          `docs/releasing.md lists "${context}", which protect-main.sh does not require`,
+        );
+      }
+    }
+    for (const context of required) {
+      if (!listed.includes(context)) {
+        problems.push(
+          `docs/releasing.md omits "${context}", which protect-main.sh requires`,
+        );
+      }
+    }
+  } catch (error) {
+    problems.push(error.message);
+  }
+
   if (problems.length > 0) {
     console.error("documentation drifted from the tree it describes:");
     for (const problem of problems) {
@@ -388,7 +549,9 @@ async function main() {
   console.log(
     `documentation matches the tree: ${claims.length} counted claims, ` +
       `${links} local links, ${references} named paths ` +
-      `(${generated.size} generated, skipped), and the recorded ` +
+      `(${generated.size} generated, skipped), ${contexts} required checks ` +
+      "agreeing across workflow, protection script, and chapter, a consistent " +
+      "MSRV, and the recorded " +
       "campaign breakdown",
   );
 }
