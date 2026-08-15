@@ -42,6 +42,54 @@ declares Rust 1.85 compatibility, matching the workspace MSRV. It is an exact
 development-dependency pin so a test-only dependency update cannot silently
 raise the supported compiler version.
 
+## Distribution sensitivity
+
+A test asserting that counts fall inside a hand-picked band is a hypothesis test
+whose operating point nobody wrote down. The in-module distribution tests use
+bands about six standard deviations wide, which is the right shape — a false
+alarm is then about one in a billion, so the suite does not flake — but at their
+sample sizes six standard deviations is also five percent of the expected count,
+so a sampler biased by four percent passes.
+
+`tests/distribution_power.rs` keeps the threshold and fixes the other half. The
+sample size is derived from the deviation the test claims to detect, and each
+assertion first checks that its own design is powerful enough to see that
+deviation.
+
+Sizing carries an explicit power target. Placing the claimed deviation exactly
+on the rejection boundary detects it only about half the time, because the
+estimate is centred on the boundary and falls short as often as it clears it, so
+the sample must place that deviation `Z + Z_power` standard deviations out:
+
+```text
+n >= (Z + Z_power)^2 * (1 - p) / (relative^2 * p)
+```
+
+`Z` is 6.8 and `Z_power` is 1.645, a ninety-five percent one-sided detection
+target, which costs about 1.5 times the samples that a fifty percent target
+would. An underpowered test fails
+as loudly as a biased sampler, so sensitivity cannot decay quietly as the code
+around it changes. Two further tests check the checker, one supplying a sample
+too small and one a bias just past the claimed resolution.
+
+Randomized policies are swept over a fixed set of seeds rather than one. A
+single seed makes a distribution test a regression test on one draw: a sampler
+biased for every seed but that one passes forever. Fixing the *set* keeps the
+run reproducible, which the mutation gate requires, while sampling several
+points of the seed space.
+
+These tests are `#[ignore]` by default and run in release:
+
+```console
+cargo test --release -p poise-core --test distribution_power -- --ignored
+```
+
+The samples run to millions. That costs tens of milliseconds optimized and
+about three seconds unoptimized, and the mutation campaign runs the unoptimized
+suite once per mutant, where three seconds would become half an hour of
+campaign time. The split keeps the sensitivity without charging every mutant
+for it.
+
 Property testing is one verification layer, not a replacement for mutation,
 fuzz, model-checking, benchmark, simulation, and coverage gates. The mutation
 policy and reproducible `poise-core` campaign are documented in
