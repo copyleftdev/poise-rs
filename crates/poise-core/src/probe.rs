@@ -1,6 +1,9 @@
+use crate::{Candidate, Selection};
+
 use std::{
+    borrow::Borrow,
     error::Error,
-    fmt,
+    fmt, mem,
     num::{NonZeroU32, NonZeroUsize},
     time::{Duration, Instant},
 };
@@ -208,6 +211,43 @@ impl Error for ProbeDecisionError {}
 
 struct PoolState<Id> {
     entries: Vec<ProbeEntry<Id>>,
+    /// Observations offered to a ranking function, retained between calls.
+    ///
+    /// Kept here rather than allocated per decision, following the scratch
+    /// discipline the cached policies use: an unchanged workload allocates
+    /// nothing after the first decision.
+    offered: Vec<ProbeEntry<Id>>,
+    /// For each offered observation, where it came from.
+    ///
+    /// The candidate index is what the caller needs to dispatch; the entry
+    /// index is what this pool needs to charge the right budget.
+    origins: Vec<(usize, usize)>,
+}
+
+/// A selection made against a candidate slice, and the observation behind it.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct ProbeDecision<Id> {
+    selection: Selection,
+    entry: ProbeEntry<Id>,
+}
+
+impl<Id> ProbeDecision<Id> {
+    /// Returns the chosen candidate's position in the slice that was offered.
+    #[must_use]
+    pub const fn selection(&self) -> Selection {
+        self.selection
+    }
+
+    /// Returns the observation that informed the choice.
+    pub const fn entry(&self) -> &ProbeEntry<Id> {
+        &self.entry
+    }
+
+    /// Consumes the decision, returning the observation.
+    #[must_use]
+    pub fn into_entry(self) -> ProbeEntry<Id> {
+        self.entry
+    }
 }
 
 /// A bounded, self-expiring pool of replica observations.
@@ -297,6 +337,8 @@ impl<Id> ProbePool<Id> {
             config,
             state: Arc::new(Mutex::new(PoolState {
                 entries: Vec::new(),
+                offered: Vec::new(),
+                origins: Vec::new(),
             })),
         }
     }
@@ -422,6 +464,159 @@ impl<Id> ProbePool<Id> {
             state.entries.remove(index);
         }
         Ok(decided)
+    }
+
+    /// Selects among the candidates this pool holds a usable observation for.
+    ///
+    /// See [`ProbePool::decide_among_at`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProbeDecisionError`] when no candidate has a usable
+    /// observation, the ranking function chose none, or it returned an invalid
+    /// index.
+    pub fn decide_among<C, F>(
+        &self,
+        candidates: &[C],
+        choose: F,
+    ) -> Result<ProbeDecision<Id>, ProbeDecisionError>
+    where
+        Id: Clone + Borrow<C::Id>,
+        C: Candidate,
+        C::Id: Eq,
+        F: FnOnce(&[ProbeEntry<Id>]) -> Option<usize>,
+    {
+        self.decide_among_at(candidates, Instant::now(), choose)
+    }
+
+    /// Selects among the candidates with a usable observation as of `now`.
+    ///
+    /// This is [`ProbePool::decide_at`] with the eligibility filtering already
+    /// done. The pool intersects its unexpired observations with `candidates`
+    /// by identity, drops any candidate that is not
+    /// [eligible](Candidate::is_eligible), and offers the ranking function only
+    /// what is left. The returned decision carries the chosen candidate's
+    /// position in `candidates`, so there is nothing to map back.
+    ///
+    /// Prefer this over `decide_at` when selecting for a request. The bare form
+    /// hands the ranking function every retained observation, including ones
+    /// naming replicas that have since drained or left, and filtering them is
+    /// the caller's responsibility there — a responsibility that is silently
+    /// omissible and routes traffic to a departed replica when it is omitted.
+    /// This form makes it impossible to forget, using the caller's own identity
+    /// type and the caller's own definition of eligibility.
+    ///
+    /// The pool still owns no membership model. It caches no candidate set,
+    /// tracks no generation, and decides no eligibility of its own; it takes
+    /// the slice handed to it and declines to offer observations for anything
+    /// absent from it.
+    ///
+    /// Comparison is `O(observations * candidates)`. The pool is small by
+    /// construction, so this is bounded by the pool's capacity rather than
+    /// growing with it. Scratch is retained, so an unchanged workload allocates
+    /// nothing after the first decision.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProbeDecisionError::NoProbes`] when no eligible candidate has
+    /// an unexpired observation, which is the ordinary cold-start outcome
+    /// rather than a failure. [`ProbeDecisionError::NoSelection`] and
+    /// [`ProbeDecisionError::IndexOutOfBounds`] carry their usual meanings, and
+    /// the pool is unchanged except for expiry in every error case.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use std::{num::{NonZeroU32, NonZeroUsize}, time::Duration};
+    /// use poise_core::{Backend, ProbePool, ProbePoolConfig, ProbeReading, Status};
+    ///
+    /// let config = ProbePoolConfig::new(
+    ///     NonZeroUsize::new(16).unwrap(),
+    ///     NonZeroU32::new(1).unwrap(),
+    ///     Duration::from_secs(1),
+    /// )?;
+    /// let pool = ProbePool::new(config);
+    ///
+    /// pool.record("west".to_owned(), ProbeReading::new(7, Duration::from_millis(20)));
+    /// pool.record("east".to_owned(), ProbeReading::new(2, Duration::from_millis(35)));
+    /// // An observation for a replica that has since left the membership.
+    /// pool.record("gone".to_owned(), ProbeReading::new(0, Duration::from_millis(1)));
+    ///
+    /// let candidates = [
+    ///     Backend::new("west".to_owned()),
+    ///     Backend::new("east".to_owned()),
+    /// ];
+    ///
+    /// let decision = pool.decide_among(&candidates, |observed| {
+    ///     observed
+    ///         .iter()
+    ///         .enumerate()
+    ///         .min_by_key(|(_, entry)| entry.requests_in_flight())
+    ///         .map(|(index, _)| index)
+    /// })?;
+    ///
+    /// // The departed replica was never offered, and the decision indexes the
+    /// // candidate slice directly.
+    /// assert_eq!(candidates[decision.selection().index()].id(), "east");
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn decide_among_at<C, F>(
+        &self,
+        candidates: &[C],
+        now: Instant,
+        choose: F,
+    ) -> Result<ProbeDecision<Id>, ProbeDecisionError>
+    where
+        Id: Clone + Borrow<C::Id>,
+        C: Candidate,
+        C::Id: Eq,
+        F: FnOnce(&[ProbeEntry<Id>]) -> Option<usize>,
+    {
+        let mut state = self.lock();
+        self.expire(&mut state, now);
+
+        // Taken out so the ranking function can borrow the offered slice while
+        // the entries it came from stay available to charge afterwards.
+        let mut offered = mem::take(&mut state.offered);
+        let mut origins = mem::take(&mut state.origins);
+        offered.clear();
+        origins.clear();
+
+        for (entry_index, entry) in state.entries.iter().enumerate() {
+            let candidate_index = candidates.iter().position(|candidate| {
+                candidate.is_eligible() && candidate.id() == entry.id().borrow()
+            });
+            if let Some(candidate_index) = candidate_index {
+                offered.push(entry.clone());
+                origins.push((candidate_index, entry_index));
+            }
+        }
+
+        let outcome = if offered.is_empty() {
+            Err(ProbeDecisionError::NoProbes)
+        } else {
+            match choose(&offered) {
+                None => Err(ProbeDecisionError::NoSelection),
+                Some(index) if index >= offered.len() => Err(ProbeDecisionError::IndexOutOfBounds),
+                Some(index) => Ok(origins[index]),
+            }
+        };
+
+        state.offered = offered;
+        state.origins = origins;
+
+        let (candidate_index, entry_index) = outcome?;
+        let entry = &mut state.entries[entry_index];
+        entry.remaining_uses = entry.remaining_uses.saturating_sub(1);
+        let decided = entry.clone();
+        if decided.remaining_uses == 0 {
+            state.entries.remove(entry_index);
+        }
+
+        Ok(ProbeDecision {
+            selection: Selection::new(candidate_index),
+            entry: decided,
+        })
     }
 
     fn expire(&self, state: &mut PoolState<Id>, now: Instant) {
@@ -713,6 +908,119 @@ mod tests {
         assert_eq!(decided.reading(), observed);
         assert_eq!(decided.requests_in_flight(), 42);
         assert_eq!(decided.latency(), Duration::from_millis(7));
+    }
+
+    fn ready(id: &str) -> crate::Backend<String> {
+        crate::Backend::new(id.to_owned())
+    }
+
+    fn draining(id: &str) -> crate::Backend<String> {
+        crate::Backend::new(id.to_owned()).with_status(crate::Status::Draining)
+    }
+
+    #[test]
+    fn selecting_among_candidates_never_offers_a_departed_replica() {
+        let pool = ProbePool::new(config(8, 1, Duration::from_secs(60)));
+        let now = Instant::now();
+        pool.record_at("present".to_owned(), reading(9, 90), now);
+        pool.record_at("departed".to_owned(), reading(0, 1), now);
+
+        let candidates = [ready("present")];
+        let seen = std::cell::RefCell::new(Vec::new());
+        let decision = pool
+            .decide_among_at(&candidates, now, |offered| {
+                seen.borrow_mut()
+                    .extend(offered.iter().map(|entry| entry.id().clone()));
+                Some(0)
+            })
+            .unwrap();
+
+        assert_eq!(
+            seen.into_inner(),
+            vec!["present".to_owned()],
+            "an observation for an absent candidate reached the ranking function"
+        );
+        assert_eq!(candidates[decision.selection().index()].id(), "present");
+    }
+
+    #[test]
+    fn selecting_among_candidates_never_offers_an_ineligible_one() {
+        let pool = ProbePool::new(config(8, 1, Duration::from_secs(60)));
+        let now = Instant::now();
+        pool.record_at("draining".to_owned(), reading(0, 1), now);
+
+        // The candidate is present but draining, which is the case a caller
+        // filtering on membership alone would miss.
+        let candidates = [draining("draining")];
+
+        assert_eq!(
+            pool.decide_among_at(&candidates, now, |_| Some(0)),
+            Err(ProbeDecisionError::NoProbes)
+        );
+    }
+
+    #[test]
+    fn a_decision_indexes_the_candidate_slice_not_the_pool() {
+        let pool = ProbePool::new(config(8, 1, Duration::from_secs(60)));
+        let now = Instant::now();
+        // Recorded in the opposite order to the candidate slice, so an
+        // implementation returning the pool's own index would be caught.
+        pool.record_at("second".to_owned(), reading(0, 1), now);
+
+        let candidates = [ready("first"), ready("second")];
+        let decision = pool.decide_among_at(&candidates, now, |_| Some(0)).unwrap();
+
+        assert_eq!(decision.selection().index(), 1);
+        assert_eq!(candidates[decision.selection().index()].id(), "second");
+    }
+
+    #[test]
+    fn selecting_among_candidates_charges_exactly_one_use() {
+        let pool = ProbePool::new(config(8, 2, Duration::from_secs(60)));
+        let now = Instant::now();
+        pool.record_at("shared".to_owned(), reading(0, 1), now);
+        let candidates = [ready("shared")];
+
+        for expected_remaining in [1, 0] {
+            let decision = pool.decide_among_at(&candidates, now, |_| Some(0)).unwrap();
+            assert_eq!(decision.entry().remaining_uses(), expected_remaining);
+        }
+
+        assert_eq!(
+            pool.decide_among_at(&candidates, now, |_| Some(0)),
+            Err(ProbeDecisionError::NoProbes)
+        );
+    }
+
+    #[test]
+    fn a_rejected_selection_among_candidates_spends_no_budget() {
+        let pool = ProbePool::new(config(8, 1, Duration::from_secs(60)));
+        let now = Instant::now();
+        pool.record_at("shared".to_owned(), reading(0, 1), now);
+        let candidates = [ready("shared")];
+
+        assert_eq!(
+            pool.decide_among_at(&candidates, now, |_| None),
+            Err(ProbeDecisionError::NoSelection)
+        );
+        assert_eq!(
+            pool.decide_among_at(&candidates, now, |offered| Some(offered.len())),
+            Err(ProbeDecisionError::IndexOutOfBounds)
+        );
+        assert_eq!(pool.len_at(now), 1, "a rejected decision spends no budget");
+    }
+
+    #[test]
+    fn an_empty_candidate_slice_reports_no_probes() {
+        let pool = ProbePool::new(config(8, 1, Duration::from_secs(60)));
+        let now = Instant::now();
+        pool.record_at("orphan".to_owned(), reading(0, 1), now);
+        let candidates: [crate::Backend<String>; 0] = [];
+
+        assert_eq!(
+            pool.decide_among_at(&candidates, now, |_| Some(0)),
+            Err(ProbeDecisionError::NoProbes)
+        );
     }
 
     #[test]
