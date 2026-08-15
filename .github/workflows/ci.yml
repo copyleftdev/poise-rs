@@ -33,6 +33,10 @@ jobs:
         env:
           RUSTDOCFLAGS: -D warnings
       - run: node scripts/check-release-metadata.mjs
+      # The script suite decides what blocks a merge, so its own arithmetic is
+      # tested rather than trusted.
+      - name: Script unit tests
+        run: node --test scripts/*.test.mjs
 
   book:
     name: Documentation book
