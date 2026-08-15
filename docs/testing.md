@@ -52,9 +52,22 @@ sample sizes six standard deviations is also five percent of the expected count,
 so a sampler biased by four percent passes.
 
 `tests/distribution_power.rs` keeps the threshold and fixes the other half. The
-sample size is derived from the deviation the test claims to detect, from
-`n >= Z^2 (1 - p) / (relative^2 * p)`, and each assertion first checks that its
-own design is powerful enough to see that deviation. An underpowered test fails
+sample size is derived from the deviation the test claims to detect, and each
+assertion first checks that its own design is powerful enough to see that
+deviation.
+
+Sizing carries an explicit power target. Placing the claimed deviation exactly
+on the rejection boundary detects it only about half the time, because the
+estimate is centred on the boundary and falls short as often as it clears it, so
+the sample must place that deviation `Z + Z_power` standard deviations out:
+
+```text
+n >= (Z + Z_power)^2 * (1 - p) / (relative^2 * p)
+```
+
+`Z` is 6.8 and `Z_power` is 1.645, a ninety-five percent one-sided detection
+target, which costs about 1.5 times the samples that a fifty percent target
+would. An underpowered test fails
 as loudly as a biased sampler, so sensitivity cannot decay quietly as the code
 around it changes. Two further tests check the checker, one supplying a sample
 too small and one a bias just past the claimed resolution.

@@ -34,17 +34,34 @@ use poise_core::{
 /// project, which is a precondition for a gate that blocks merges.
 const THRESHOLD_SIGMA: f64 = 6.8;
 
-/// Smallest sample size that can see a `relative` deviation at the threshold.
+/// Additional margin so a deviation at the claimed size is actually detected.
 ///
-/// Rejection needs `Z * sqrt(n p (1 - p)) <= relative * n * p`, which solves to
-/// `n >= Z^2 (1 - p) / (relative^2 * p)`. The binding bin is the least likely
-/// one, so the caller passes the smallest probability in the distribution.
+/// Sizing a sample so the claimed deviation lands exactly on the rejection
+/// boundary buys a detection probability of about one half: the estimate is
+/// centred on the boundary, so it falls short as often as it clears it. A test
+/// with fifty percent power is not a test, it is a coin flip that happens to
+/// agree with the truth on average.
+///
+/// The margin is the normal quantile for the detection rate we want, so the
+/// sample must place the claimed deviation `THRESHOLD_SIGMA + POWER_SIGMA`
+/// standard deviations out. At 1.645 the detection rate is ninety-five percent,
+/// one-sided, which is the direction a bias moves a bin.
+const POWER_SIGMA: f64 = 1.645;
+
+/// Smallest sample size that detects a `relative` deviation at the target power.
+///
+/// Rejection needs `Z * sigma <= relative * n * p`; detecting a deviation of
+/// exactly that size ninety-five percent of the time needs the deviation to sit
+/// `Z + Z_power` sigma out instead, which solves to
+/// `n >= (Z + Z_power)^2 (1 - p) / (relative^2 * p)`. The binding bin is the
+/// least likely one, so the caller passes the smallest probability.
 fn required_samples(smallest_probability: f64, relative: f64) -> u64 {
     assert!(
         smallest_probability > 0.0 && relative > 0.0,
         "a sample size is only defined for a positive probability and tolerance"
     );
-    let numerator = THRESHOLD_SIGMA * THRESHOLD_SIGMA * (1.0 - smallest_probability);
+    let detectable = THRESHOLD_SIGMA + POWER_SIGMA;
+    let numerator = detectable * detectable * (1.0 - smallest_probability);
     let denominator = relative * relative * smallest_probability;
     let samples = (numerator / denominator).ceil();
     assert!(
@@ -71,11 +88,15 @@ fn assert_distribution(label: &str, counts: &[u64], probabilities: &[f64], relat
         let expected = probability * samples;
         let sigma = (samples * probability * (1.0 - probability)).sqrt();
 
+        // The same combined threshold the sample size was derived from. Checking
+        // only the rejection boundary here would accept a sample with fifty
+        // percent power, which is the defect this margin exists to prevent.
+        let detectable = THRESHOLD_SIGMA + POWER_SIGMA;
         assert!(
-            THRESHOLD_SIGMA * sigma <= relative * expected,
-            "{label}: bin {index} is underpowered -- {total} samples resolve \
-             {:.3}% at {THRESHOLD_SIGMA} sigma, short of the {:.3}% this test claims",
-            100.0 * THRESHOLD_SIGMA * sigma / expected,
+            detectable * sigma <= relative * expected,
+            "{label}: bin {index} is underpowered -- {total} samples detect \
+             {:.3}% at {detectable} sigma, short of the {:.3}% this test claims",
+            100.0 * detectable * sigma / expected,
             100.0 * relative
         );
 
@@ -267,7 +288,10 @@ fn an_undersized_sample_is_rejected_rather_than_tolerated() {
 #[test]
 #[should_panic(expected = "sigma away")]
 fn a_biased_sample_is_rejected() {
-    let samples = required_samples(0.5, 0.01);
+    // Twice the minimum, so the power assertion clears comfortably and the
+    // panic this test expects is the deviation one. At exactly the minimum the
+    // two assertions sit on the same boundary and rounding decides which fires.
+    let samples = required_samples(0.5, 0.01) * 2;
     let half = samples / 2;
     // Two percent high against a one percent claim.
     let skew = half / 50;
