@@ -8,9 +8,12 @@ proposals. Nothing in this chapter has appeared in a released crate.
 
 Prequal is proposed as the next selection family: a policy that chooses among
 replicas using asynchronously collected probes rather than candidate-attached
-load metrics. It would close two [roadmap](roadmap.md) items, adaptive
-concurrency and capacity-aware routing, and it is the natural home for the
-retry and hedge exclusion also listed there.
+load metrics. It would give the adaptive-concurrency and capacity-aware-routing
+[roadmap](roadmap.md) entries the signal they need — the entries themselves
+describe deployments, and a primitive supplies the piece rather than closing
+them. What this chapter does *not* propose is set out under
+[What this chapter is not proposing](#what-this-chapter-is-not-proposing), which
+is worth reading first if the length here suggests otherwise.
 
 ## Why probing changes the contract
 
@@ -300,29 +303,6 @@ documented with their operational meaning, and justified against measurements
 rather than inherited — with the caveat that `b_reuse` is derived rather than
 chosen, and choosing it directly is already a departure.
 
-## Hazards the pool does not address
-
-**Sinkholing.** A replica failing fast looks fast. Errors returned immediately
-lower its latency and drain its RIF, so a latency-minimizing rule routes *more*
-traffic to the replica least able to serve it, and the feedback is
-self-reinforcing. The paper reports carrying heuristics against this and omits
-their details. Poise's existing separation helps but does not close it: passive
-health and circuit breaking already observe error rates, and probes are
-explicitly not authoritative over eligibility, so a sinkholing replica should be
-excluded by health before ranking ever sees it. That argument depends on health
-being configured to catch fast failures, which is not automatic, and the
-proposal should not claim the hazard is handled until a law demonstrates it.
-
-**Synchronous mode.** The paper also runs a synchronous variant that probes `d`
-replicas on the request path, waits for `d - 1` responses, and ranks those —
-used in YouTube, and required when a replica's cost depends on state it holds,
-because the probe can carry query information and the replica can bias its
-reported load to attract work it can serve cheaply. That mode puts probing on
-the critical path and therefore needs a runtime, which is precisely what
-`poise-core` must not acquire. If synchronous probing is ever wanted it belongs
-in `poise-tokio` or above, and the core rule must stay a function of a pool it
-did not fill.
-
 ## Verification plan
 
 Mapped onto the evidence table in [testing](testing.md):
@@ -361,9 +341,10 @@ models cover the concurrent reuse bound. Reference-implementation parity is
 listed with them, but it validates the selection rule rather than the pool, so
 it stays pending with the rest of the rule laws and lands with the policy.
 
-## Resolved questions
+## Settled by the paper
 
-The paper answers three of the four questions this chapter opened with.
+Three questions this chapter opened with are answered by the source rather than
+left to taste.
 
 **The quantile is a fixed rank, and that is defensible.** `Q_RIF` is a
 configured constant; what adapts is the estimated RIF distribution it indexes
@@ -387,21 +368,66 @@ observable through `regime`; explicit caller composition keeps the type simpler
 but makes silent fallback easy to write by accident. The former is proposed, on
 the standing requirement that outcomes stay distinguishable.
 
-## Open questions
+## What this chapter is not proposing
 
-- Does the pool key on candidate identity or on the discovery generation plus
-  index, and what happens to entries that survive a membership change? **The
-  paper does not address this.** It samples probe destinations uniformly without
-  replacement from the available replicas and says nothing about pool entries
-  outliving a membership change, so this remains ours to decide.
-- Where does `r_remove` live, and is a query-denominated removal rate meaningful
-  for a library that does not see queries? The pool can expose removal; only
-  something that counts requests can pace it.
-- Should reuse compensation adjust the RIF on a returned entry, given the paper
-  does this for RIF, declines to do it for latency, and calls the result
-  partial?
-- What law demonstrates that health excludes a sinkholing replica before
-  ranking observes it?
+Prequal, as the paper describes it, is a load balancer: probe scheduling tied to
+request rate, a reuse budget derived from fleet size, degradation control paced
+per query, sinkhole heuristics, and a synchronous mode that puts probing on the
+request path. Poise is not that, and reading the chapter end to end it would be
+easy to conclude otherwise, because describing a system faithfully means
+describing all of it.
+
+The line is the same one the rest of the workspace draws. Poise ships
+primitives: a bounded store with a retention contract, and a selection rule that
+is a pure function of what it is handed. A balancer is something an application
+composes *from* those, and several questions that look open from inside the
+paper are already answered by that boundary.
+
+**Membership is the caller's.** `ProbePool` is generic over identity and stores
+what it is given. It is not authoritative over eligibility, and `decide` takes
+the ranking function rather than returning the slice, so the only code that sees
+both the retained observations and the current candidate set is the caller's
+selector — which is exactly where an entry naming a departed replica gets
+dropped. Whether identity means a name or a discovery generation is a decision
+for whoever owns the membership, and `poise-discovery` already owns it. The pool
+needs no opinion, and giving it one would put a second membership model in the
+workspace.
+
+**Rates are the caller's.** A removal rate denominated in queries cannot live in
+something that never sees a query. The same is true of the reuse budget, which
+the paper derives from probing rate, removal rate, pool size, and replica count:
+the pool knows one of those four. It exposes the bound; whatever counts requests
+chooses it.
+
+**Failure detection is health's.** Sinkholing — a replica failing fast enough to
+look fast — is real, and it is not a probe-pool problem. Passive health, circuit
+breaking, and outcome windows already observe error rates, and probes are
+explicitly not authoritative over eligibility, so a sinkholing replica should be
+excluded before ranking ever sees it. Composing that correctly is the
+application's job, and a primitive that quietly filtered on error rate would be
+duplicating a subsystem that already exists.
+
+**Scheduling is a runtime's.** Probe issuance, its coupling to request rate, and
+the synchronous variant all need a scheduler. `poise-core` has none and must not
+acquire one. Those belong in `poise-tokio` or above, and the rule must stay a
+function of a pool it did not fill.
+
+What remains in scope is small and concrete: the hot-cold rule as a selection
+policy alongside the other thirteen, and the retention mechanics the rule
+depends on.
+
+## The one open API question
+
+Degradation is a retention property, so it belongs to the pool if it belongs
+anywhere here — selection consumes the observations reporting idle replicas
+first, and what accumulates is a pool describing the fleet as busier than it is.
+Removing the worst entry needs a ranking, which the pool does not have and
+should not acquire.
+
+The shape that fits is the one `decide_at` already established: a removal entry
+point taking the caller's ranking, applied in reverse, under the same lock. That
+is the only addition to the pool's surface this chapter proposes. Pacing it
+stays outside, for the reason above.
 
 ## References
 

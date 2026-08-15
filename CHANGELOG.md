@@ -23,7 +23,9 @@ Project development can be supported through
   selection contract ahead of the policy itself, with the originating paper's
   operating points recorded, three of its open questions resolved against them,
   and degradation control identified as an obligation the pool does not yet
-  meet.
+  meet. The chapter states its own scope explicitly: membership, rates, failure
+  detection, and scheduling stay with the caller, so what it proposes is the
+  primitive a probe-based balancer needs rather than the balancer.
 
 - Criterion benchmarks for `poise-core`: steady-state selection cost for every
   stable policy across 8, 64, and 512 candidates, and membership-change cost for
