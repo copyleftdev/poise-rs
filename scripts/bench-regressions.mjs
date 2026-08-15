@@ -2,12 +2,9 @@
 
 // Decides which criterion comparisons are real regressions.
 //
-// Criterion tests each benchmark independently. This workspace measures 39
-// points -- thirteen policies at three sizes, plus the churn groups -- so at a
-// five percent significance level roughly two of them are expected to be
-// labelled changed on every run where nothing changed at all. A gate that cries
-// wolf twice a run is a gate people learn to ignore, which is worse than not
-// having one.
+// Criterion tests each benchmark independently, and this workspace measures
+// dozens of points. Judging each label alone gives a gate people learn to
+// ignore, which is worse than not having one.
 //
 // Two filters, both required to call something a regression.
 //
@@ -29,8 +26,28 @@ import { join, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const criterion = join(root, "target", "criterion");
 
-const familyWiseAlpha = Number(process.env.POISE_BENCH_ALPHA ?? "0.05");
-const minimumEffect = Number(process.env.POISE_BENCH_MIN_EFFECT ?? "0.05");
+/**
+ * Reads a threshold from the environment, refusing anything outside its domain.
+ *
+ * `Number()` accepts `NaN`, infinities, and negatives, and every comparison
+ * against `NaN` is false. An alpha of `NaN` would therefore find no regressions
+ * anywhere and exit zero, so a typo in an environment variable would not relax
+ * this gate, it would switch it off while still printing a clean report. A gate
+ * that can be disabled by accident is worse than no gate, because it is
+ * believed.
+ */
+export function threshold(name, raw, fallback, { max = Number.POSITIVE_INFINITY } = {}) {
+  if (raw === undefined) {
+    return fallback;
+  }
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0 || value > max) {
+    throw new RangeError(
+      `${name} must be a finite number in (0, ${max}], got ${JSON.stringify(raw)}`,
+    );
+  }
+  return value;
+}
 
 /** Standard normal CDF via Abramowitz and Stegun 7.1.26. */
 export function normalCdf(z) {
@@ -112,6 +129,22 @@ function percent(value) {
 }
 
 async function main() {
+  let familyWiseAlpha;
+  let minimumEffect;
+  try {
+    familyWiseAlpha = threshold("POISE_BENCH_ALPHA", process.env.POISE_BENCH_ALPHA, 0.05, {
+      max: 1,
+    });
+    minimumEffect = threshold(
+      "POISE_BENCH_MIN_EFFECT",
+      process.env.POISE_BENCH_MIN_EFFECT,
+      0.05,
+    );
+  } catch (error) {
+    console.error(error.message);
+    process.exit(2);
+  }
+
   let comparisons;
   try {
     comparisons = await collect(criterion);

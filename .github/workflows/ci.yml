@@ -32,6 +32,12 @@ jobs:
       - run: cargo doc --locked --workspace --all-features --no-deps
         env:
           RUSTDOCFLAGS: -D warnings
+      # Pinned rather than inherited: the scripts use `import.meta.dirname`,
+      # which needs Node 20.11 or newer, and a runner image changing under us
+      # should not be how we find that out.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
       - run: node scripts/check-release-metadata.mjs
       # The script suite decides what blocks a merge, so its own arithmetic is
       # tested rather than trusted.

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { holmAdjust, normalCdf, twoSidedP } from "./bench-regressions.mjs";
+import { holmAdjust, normalCdf, threshold, twoSidedP } from "./bench-regressions.mjs";
 
 test("the normal CDF matches known quantiles", () => {
   assert.ok(Math.abs(normalCdf(0) - 0.5) < 1e-6);
@@ -92,4 +92,31 @@ test("a genuine outlier still survives correction", () => {
   const adjusted = holmAdjust(raw);
 
   assert.ok(adjusted[0] <= 0.05, `real regression was suppressed at ${adjusted[0]}`);
+});
+
+test("an absent threshold falls back rather than becoming NaN", () => {
+  assert.equal(threshold("POISE_BENCH_ALPHA", undefined, 0.05, { max: 1 }), 0.05);
+});
+
+test("a malformed threshold is refused rather than disabling the gate", () => {
+  // Every comparison against NaN is false, so an alpha of NaN would report no
+  // regressions anywhere and exit clean. A typo must not switch off a gate.
+  for (const raw of ["NaN", "", "abc", "-0.01", "0", "Infinity"]) {
+    assert.throws(
+      () => threshold("POISE_BENCH_ALPHA", raw, 0.05, { max: 1 }),
+      RangeError,
+      `accepted ${JSON.stringify(raw)}`,
+    );
+  }
+});
+
+test("an alpha above one is refused", () => {
+  assert.throws(() => threshold("POISE_BENCH_ALPHA", "1.5", 0.05, { max: 1 }), RangeError);
+  assert.equal(threshold("POISE_BENCH_ALPHA", "1", 0.05, { max: 1 }), 1);
+});
+
+test("an effect floor above one is allowed", () => {
+  // A floor is a relative change, and demanding better than a doubling is
+  // unusual but not incoherent, so it carries no upper bound.
+  assert.equal(threshold("POISE_BENCH_MIN_EFFECT", "2", 0.05), 2);
 });

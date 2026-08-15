@@ -202,13 +202,16 @@ whether it matters, and only the second question should stop a merge.
 
 The second filter turns out to do most of the work, which was not the
 expectation going in. Comparing two runs of *identical* code on this machine
-produced 48 comparisons, 39 of them significant at the uncorrected level and 35
-still significant after Holm — with a median effect of 1.69% and nothing above
-5%. Criterion is not crying wolf there. With a hundred samples and tight
-variance it resolves genuine sub-two-percent differences between runs, caused by
-machine state rather than by the code, and a correction designed for the case
-where no difference exists cannot suppress differences that are real but
-irrelevant. Only a magnitude threshold can.
+produced 48 comparisons; the classifier here, testing criterion's point
+estimates against their standard errors, found 39 significant at the
+uncorrected level and 35 still significant after Holm — with a median effect of
+1.69% and nothing above 5%.
+
+Neither the classifier nor criterion is crying wolf there. A hundred samples
+with tight variance genuinely resolve sub-two-percent differences between runs,
+caused by machine state rather than by the code, and a correction designed for
+the case where no difference exists cannot suppress differences that are real
+but irrelevant. Only a magnitude threshold can.
 
 `POISE_BENCH_ALPHA` and `POISE_BENCH_MIN_EFFECT` override the defaults. Raising
 the floor is the honest response to a noisy machine; lowering alpha is not, and
