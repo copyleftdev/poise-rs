@@ -117,7 +117,13 @@ a failure, and so is a claim stated twice: a checker that quietly stops checking
 is worse than no checker, and a duplicated claim leaves a stale copy behind
 every correction.
 
-It also resolves every local link and every repository path the prose names.
+It also resolves every local link and every repository path the prose names,
+skipping the ones git ignores. Generated output is named legitimately — the book
+builds to `site/book/`, which the prose says and a clean checkout does not
+contain — so checking its existence would make the gate answer differently on a
+developer machine than in CI, which is the one thing a gate must not do. The
+number skipped is printed rather than passed over quietly, since a gate that
+skips silently is indistinguishable from one that has stopped checking.
 Links in `docs/` are already validated by the book check, but README and the
 root documents are outside it, and fenced code is stripped before that check
 runs — so a chapter telling a reader to run a script is precisely the claim

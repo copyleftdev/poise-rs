@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   checkSum,
+  ignoredPaths,
   localLinks,
   referencedPaths,
   countLoomModels,
@@ -182,4 +183,20 @@ test("globs name a set rather than a file and are skipped", () => {
 test("trailing punctuation is not taken as part of the path", () => {
   const document = "Configured by scripts/protect-main.sh, then reviewed.";
   assert.deepEqual(referencedPaths(document), ["scripts/protect-main.sh"]);
+});
+
+test("generated paths are reported as skipped rather than silently dropped", async () => {
+  // A gate that skips quietly is indistinguishable from one that stopped
+  // checking, so the count of skipped paths belongs in the output.
+  const ignored = await ignoredPaths(["site/book/", "scripts/check-docs-drift.mjs"]);
+
+  assert.ok(ignored.has("site/book/"), "the built book is generated output");
+  assert.ok(
+    !ignored.has("scripts/check-docs-drift.mjs"),
+    "a tracked script must still be checked",
+  );
+});
+
+test("asking about no paths does not shell out", async () => {
+  assert.equal((await ignoredPaths([])).size, 0);
 });

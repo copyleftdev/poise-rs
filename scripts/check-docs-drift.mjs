@@ -22,10 +22,45 @@
 // -- a breakdown that no longer sums to its own total is drift that arithmetic
 // can catch without rerunning anything.
 
+import { execFile } from "node:child_process";
 import { access, readdir, readFile } from "node:fs/promises";
+import { promisify } from "node:util";
 import { extname, join, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
+
+const run = promisify(execFile);
+
+/**
+ * The subset of `paths` that git ignores.
+ *
+ * Generated output is named legitimately by documentation -- the book builds to
+ * `site/book/`, which the prose says and a clean checkout does not contain --
+ * and its presence depends on whether anyone has run a build. Checking
+ * existence for those makes the gate report a different answer on a developer
+ * machine than in CI, which is the one thing a gate must never do. Asking git
+ * is environment-independent: ignored means generated, and generated means
+ * unverifiable here rather than missing.
+ */
+export async function ignoredPaths(paths) {
+  if (paths.length === 0) {
+    return new Set();
+  }
+  try {
+    // Paths as arguments rather than on stdin: `execFile` has no way to write
+    // to a child's stdin, so `--stdin` waits for input that never arrives.
+    const { stdout } = await run("git", ["check-ignore", "--", ...paths]);
+    return new Set(stdout.split("\n").filter(Boolean));
+  } catch (error) {
+    // `check-ignore` exits non-zero when nothing matched, which is a result
+    // rather than a failure. Anything else means git could not answer, and the
+    // check falls back to existence alone rather than passing everything.
+    if (error.code === 1) {
+      return new Set((error.stdout ?? "").split("\n").filter(Boolean));
+    }
+    return new Set();
+  }
+}
 
 /** Whether a path exists, without distinguishing files from directories. */
 async function exists(path) {
@@ -303,6 +338,19 @@ async function main() {
     ),
   ];
 
+  const named = new Map();
+  for (const file of prose) {
+    const document = await readFile(join(root, file), "utf8").catch(() => null);
+    if (document !== null) {
+      for (const target of referencedPaths(document)) {
+        if (!named.has(target)) {
+          named.set(target, file);
+        }
+      }
+    }
+  }
+  const generated = await ignoredPaths([...named.keys()]);
+
   let links = 0;
   let references = 0;
   for (const file of prose) {
@@ -319,6 +367,9 @@ async function main() {
       }
     }
     for (const target of referencedPaths(document)) {
+      if (generated.has(target)) {
+        continue;
+      }
       references += 1;
       if (!(await exists(join(root, target)))) {
         problems.push(`${file}: names ${target}, which does not exist`);
@@ -336,7 +387,8 @@ async function main() {
 
   console.log(
     `documentation matches the tree: ${claims.length} counted claims, ` +
-      `${links} local links, ${references} named paths, and the recorded ` +
+      `${links} local links, ${references} named paths ` +
+      `(${generated.size} generated, skipped), and the recorded ` +
       "campaign breakdown",
   );
 }
