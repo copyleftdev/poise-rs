@@ -32,6 +32,11 @@ Project development can be supported through
   the policies that cache a table, with recorded baselines in
   [Performance](docs/performance.md) and a `scripts/bench.sh` wrapper.
 
+- `scripts/check-docs-drift.mjs`, which counts the derivable claims in the
+  prose from the source and fails when they disagree, treats a claim whose
+  pattern no longer matches as a failure rather than a pass, and checks the
+  recorded mutation breakdown against its own total.
+
 ### Changed
 
 - `scripts/mutants-core.sh` enforces its own resource bounds instead of relying

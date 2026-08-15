@@ -240,6 +240,27 @@ fn saturating_add(counter: &AtomicU64, amount: u64) {
 
 #[cfg(test)]
 mod tests {
+    /// The documented counter cardinality is the one the type actually owns.
+    ///
+    /// [`Performance`](../../../docs/performance.md) states a fixed count, and
+    /// fixed cardinality is a contract this crate makes rather than an
+    /// incidental fact: adding a decision kind or a latency bound changes it
+    /// silently, and the prose would still read correctly. Derived here rather
+    /// than written down, so the sum has to be updated deliberately.
+    #[test]
+    fn counter_cardinality_matches_the_documented_total() {
+        let total = DecisionKind::COUNT
+            + AttemptKind::COUNT
+            + 1 // readiness failures
+            + ATTEMPT_LATENCY_BUCKET_COUNT
+            + 1; // accumulated latency
+
+        assert_eq!(
+            total, 28,
+            "counter cardinality changed; update the count in docs/performance.md"
+        );
+    }
+
     use std::{sync::Arc, thread, time::Duration};
 
     use super::*;

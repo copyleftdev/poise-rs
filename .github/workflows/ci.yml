@@ -39,6 +39,10 @@ jobs:
         with:
           node-version: "22"
       - run: node scripts/check-release-metadata.mjs
+      # Counted claims in the prose, checked against the tree they describe.
+      # Several have shipped past their expiry already, and each read correctly
+      # while being wrong.
+      - run: node scripts/check-docs-drift.mjs
       # The script suite decides what blocks a merge, so its own arithmetic is
       # tested rather than trusted.
       - name: Script unit tests

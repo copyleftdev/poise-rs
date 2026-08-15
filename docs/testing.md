@@ -102,6 +102,41 @@ suite once per mutant, where three seconds would become half an hour of
 campaign time. The split keeps the sensitivity without charging every mutant
 for it.
 
+## Claims about the tree
+
+Every count in the prose is a claim with an expiry date nobody wrote down. This
+repository has shipped several past theirs: ten Loom models when there were
+thirteen, 240 test entry points when there were 259, 642 mutation sites when
+there were 705, and a performance chapter still calling criterion baselines a
+roadmap item after they had landed. Each was accurate when written, which is the
+whole difficulty — prose drifts silently, and stays readable while doing it.
+
+`scripts/check-docs-drift.mjs` counts the derivable claims from the source and
+fails when the prose disagrees. A claim whose pattern no longer matches is also
+a failure, and so is a claim stated twice: a checker that quietly stops checking
+is worse than no checker, and a duplicated claim leaves a stale copy behind
+every correction.
+
+It also resolves every local link and every repository path the prose names,
+skipping the ones git ignores. Generated output is named legitimately — the book
+builds to `site/book/`, which the prose says and a clean checkout does not
+contain — so checking its existence would make the gate answer differently on a
+developer machine than in CI, which is the one thing a gate must not do. The
+number skipped is printed rather than passed over quietly, since a gate that
+skips silently is indistinguishable from one that has stopped checking.
+Links in `docs/` are already validated by the book check, but README and the
+root documents are outside it, and fenced code is stripped before that check
+runs — so a chapter telling a reader to run a script is precisely the claim
+nothing verified. That is the claim most likely to rot after a rename, and the
+one a reader hits first.
+
+Some claims cannot be derived by a script that does not run the campaign
+producing them. The recorded mutation results are checked for internal
+consistency instead — a breakdown that no longer sums to its own total is drift
+arithmetic can catch. Counts fixed at compile time, such as the metrics
+cardinality, are asserted in the crate that owns them rather than scraped, since
+that is where a change to them happens.
+
 Property testing is one verification layer, not a replacement for mutation,
 fuzz, model-checking, benchmark, simulation, and coverage gates. The mutation
 policy and reproducible `poise-core` campaign are documented in
