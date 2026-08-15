@@ -122,3 +122,24 @@ test("a breakdown that no longer sums to its total is reported", () => {
   assert.equal(checkSum("recorded campaign", 705, parts), null);
   assert.match(checkSum("recorded campaign", 700, parts), /= 705, but the total/);
 });
+
+test("async test attributes are entry points too", () => {
+  // Counting only `#[test]` undercounts by every runtime-provided test, which
+  // would have held a wrong number steady rather than catching it.
+  const source = `
+#[test]
+fn plain() {}
+
+#[tokio::test]
+async fn async_plain() {}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn async_configured() {}
+`;
+  assert.equal(countTestAttributes([source]), 3);
+});
+
+test("attributes that merely mention test are not counted", () => {
+  const source = "#[cfg(test)]\nmod tests {}\n#[should_panic]\nfn nope() {}";
+  assert.equal(countTestAttributes([source]), 0);
+});

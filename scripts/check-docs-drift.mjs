@@ -44,10 +44,19 @@ async function walk(directory, extensions) {
   return found;
 }
 
-/** Counts `#[test]` attributes across the workspace sources. */
+/**
+ * Counts test entry points across the workspace sources.
+ *
+ * Both the plain attribute and the runtime-provided ones, because the claim is
+ * about authored entry points rather than about a spelling. Counting `#[test]`
+ * alone undercounts by every async test, which is a defect the first version of
+ * this had: the check would have held a wrong number steady rather than
+ * catching it.
+ */
 export function countTestAttributes(sources) {
   return sources.reduce(
-    (total, source) => total + (source.match(/#\[test\]/g)?.length ?? 0),
+    (total, source) =>
+      total + (source.match(/#\[(?:test\]|[\w:]*::test(?:\([^)]*\))?\])/g)?.length ?? 0),
     0,
   );
 }
