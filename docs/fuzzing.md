@@ -49,10 +49,30 @@ probe admission, forced-status generation invalidation, passive-circuit failure
 accrual, bounded probe reuse under concurrent selection, and coherent
 rolling-window snapshots during concurrent record/clear operations.
 
+### Linearizability, not only invariants
+
+Three of the probe-pool models ask a stronger question than the others. An
+invariant asks whether a bound was exceeded; linearizability asks whether what
+the threads observed could have happened at all — whether some sequential order
+of their operations, respecting each thread's own program order, reproduces
+every observation against a naive reference implementation.
+
+The distinction has teeth here. Two selectors that both report one use
+remaining have charged one decrement twice, which is a lost update. It totals
+two successes against a budget of two, so a counting invariant accepts it, and
+no sequential order produces it. Carrying the observed remaining-use count into
+the history is what makes that visible.
+
+The search is exhaustive because these models issue at most a handful of
+operations. Two further tests check the checker itself, one supplying a history
+that must be rejected and one a history that must be accepted, because a
+checker that always answered the same way would pass every model above while
+proving nothing.
+
 ## Model-checking bounds
 
 Loom explores a model exhaustively, so its cost is combinatorial in the threads
-and shared operations a model contains. Today's ten models all complete well
+and shared operations a model contains. Today's thirteen models all complete well
 inside loom's default ceiling, but the failure mode of adding one more
 concurrent step is a state-space explosion rather than a gradual slowdown. The
 wrapper bounds that the same way the mutation gate is bounded, and for the same
