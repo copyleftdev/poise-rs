@@ -11,6 +11,17 @@
 
 Composable, runtime-independent load-balancing primitives for Rust.
 
+[![The Poise control loop: discovery publishes an immutable snapshot, health and
+load signals narrow it to an eligible candidate slice, a policy returns an
+index, Tower dispatches with a readiness permit it already held, and the
+classified outcome returns along a feedback lane into load trackers, the outcome
+window, health circuits, and metrics.](docs/assets/control-loop.svg)](docs/assets/control-loop.svg)
+
+Shape says what a thing is: drums hold mutable state, the stack is one immutable
+revision over older ones, plates carry borrowed candidates, and the hexagonal
+prism is the only solid that turns a slice into an index. Color says which crate
+owns it.
+
 Poise separates membership, eligibility, selection, dispatch, and feedback so
 that sophisticated routing remains explainable. Simple policies are small and
 direct. Affinity, topology, health, discovery, and readiness integrations build
@@ -38,22 +49,9 @@ Start with [Getting started](docs/getting-started.md) for a first integration,
 ## Why Poise exists
 
 Load balancing is larger than choosing an index. A production request passes
-through several independently fallible decisions:
-
-```mermaid
-flowchart LR
-    D[Discovery] --> M[Versioned membership]
-    M --> E[Eligibility]
-    H[Health + circuits] --> E
-    L[Load signals] --> E
-    E --> P[Policy]
-    P --> S[Selection]
-    S --> R[Readiness-aware dispatch]
-    R --> F[Outcome feedback]
-    F --> H
-    F --> L
-    R --> O[Bounded observability]
-```
+through several independently fallible decisions, which is what the map above
+draws: discovery, versioned membership, eligibility, selection, readiness-aware
+dispatch, and the outcome feedback that returns to health, load, and telemetry.
 
 Poise gives each boundary a concrete contract. Policies select; they do not
 dispatch. Discovery publishes immutable generations; it does not mutate a live

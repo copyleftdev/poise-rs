@@ -129,6 +129,51 @@
   }
   .masthead nav a:hover::after, .masthead nav a:focus-visible::after { scale: 1; transform-origin: left; }
 
+  /* The control loop, drawn once. The plate keeps its own dark ground because
+     the drawing is lit for one: it is an instrument reading, not page chrome. */
+  .control-loop {
+    width: var(--page);
+    margin-inline: auto;
+    padding-block: clamp(7rem, 13vh, 9rem) clamp(4rem, 7vw, 6.5rem);
+    display: grid;
+    gap: clamp(2.25rem, 3.4vw, 3rem);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .control-loop-copy { max-width: 47rem; }
+
+  /* Smaller than the orrery's overlaid hero: here the type shares the first
+     screen with the drawing instead of standing in front of it. */
+  .control-loop h1 { max-width: 16ch; font-size: clamp(3rem, 5.2vw, 5.4rem); }
+  .control-loop .hero-deck { margin-top: clamp(1.3rem, 2vw, 1.9rem); max-width: 44rem; }
+  .control-loop .hero-actions { margin-top: 1.7rem; }
+
+  .control-loop-figure { display: grid; gap: 1.15rem; margin: 0; }
+
+  .control-loop-plate {
+    padding: 0.5rem;
+    border: 1px solid var(--line-bright);
+    border-radius: 14px;
+    background: oklch(19% 0.016 145);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  /* Below this width the labels stop being readable, so the plate scrolls
+     rather than shrinking the drawing into decoration. */
+  .control-loop-plate img { width: 100%; min-width: 58rem; height: auto; }
+
+  .control-loop-figure figcaption {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(21rem, 1fr));
+    gap: 0.5rem 2.5rem;
+    color: var(--bone-dim);
+    font-size: 0.86rem;
+    line-height: 1.5;
+  }
+
+  .control-loop-figure figcaption strong { color: var(--bone-soft); font-weight: 500; }
+
   .orrery {
     position: relative;
     isolation: isolate;
@@ -189,6 +234,15 @@
     font-size: clamp(3.65rem, 7.3vw, 7.6rem);
     font-weight: 430;
     line-height: 0.86;
+  }
+
+  /* The orrery is no longer the page's opening claim, so its heading drops a
+     level; it keeps the hero's proportions because it is still a hero. */
+  .hero-copy h2 {
+    max-width: 13ch;
+    font-size: clamp(3rem, 6vw, 6.2rem);
+    font-weight: 430;
+    line-height: 0.88;
   }
   h1 em, h2 em { font-variation-settings: "SHRP" 20, "slnt" -12; }
 
@@ -499,6 +553,8 @@
 
 @media (max-width: 900px) {
   :root { --page: min(90vw, 720px); }
+  .control-loop { padding-block: 7.5rem clamp(3rem, 8vw, 4.5rem); }
+  .control-loop-plate img { min-width: 52rem; }
   .masthead { grid-template-columns: 1fr auto; }
   .masthead-status { display: none; }
   .masthead nav a:not(:last-child) { display: none; }
@@ -525,6 +581,9 @@
 }
 
 @media (max-width: 580px) {
+  .control-loop { padding-block: 6.5rem 3rem; }
+  .control-loop-figure figcaption { font-size: 0.8rem; }
+  .hero-copy h2 { max-width: 10ch; font-size: clamp(2.6rem, 11vw, 4.6rem); }
   .masthead { min-height: 4.5rem; }
   .orrery { min-height: 51rem; }
   .hero-copy { top: 7rem; }
