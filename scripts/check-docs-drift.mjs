@@ -288,6 +288,80 @@ export function msrvClaims({ manifest, readme, workflow }) {
   return { declared, claims };
 }
 
+/**
+ * How a workflow chooses its Node version, if it chooses one at all.
+ *
+ * The `scripts/*.mjs` gates use APIs a modern Node provides and an older one
+ * does not, so the version they run on is a real dependency rather than an
+ * incidental one. `.nvmrc` is the single copy of it: contributors read it, and
+ * every workflow reads it too. A version written inline would be a second copy,
+ * which is the shape of drift this checker exists to refuse.
+ */
+export function nodeVersionPins(workflow) {
+  return [...workflow.matchAll(/setup-node@[^\n]*\n\s+with:\n((?:[ \t]+[\w-]+:.*\n)+)/g)].map(
+    (match) => ({
+      inline: match[1].match(/^\s*node-version:\s*["']?([^"'\n]+?)["']?\s*$/m)?.[1],
+      file: match[1].match(/^\s*node-version-file:\s*["']?([^"'\n]+?)["']?\s*$/m)?.[1],
+    }),
+  );
+}
+
+/**
+ * The commands a workflow runs, and the whole file for a shell script.
+ *
+ * Only `run:` counts. A step *named* "Check every node in the graph" runs no
+ * Node at all, and a check that reads step names instead of commands reports
+ * a dependency the workflow does not have.
+ */
+function commandsIn(source) {
+  if (!/^\s*(?:- )?(?:run|uses|name):/m.test(source)) {
+    return source.split("\n"); // a script: every line is a command
+  }
+  const lines = source.split("\n");
+  const commands = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const step = lines[index].match(/^(\s*)(?:- )?run:[ \t]*(.*)$/);
+    if (!step) {
+      continue;
+    }
+    const [, indent, inline] = step;
+    if (inline.trim() !== "" && !/^[|>]/.test(inline.trim())) {
+      commands.push(inline);
+      continue;
+    }
+    // A block scalar: every following line indented past the `run:` key.
+    for (let body = index + 1; body < lines.length; body += 1) {
+      const line = lines[body];
+      if (line.trim() !== "" && line.match(/^\s*/)[0].length <= indent.length) {
+        break;
+      }
+      commands.push(line);
+    }
+  }
+  return commands;
+}
+
+/**
+ * Whether a workflow's steps reach Node, directly or through one repo script.
+ *
+ * `run: node scripts/check-book.mjs` is visible in the workflow;
+ * `run: scripts/build-book.sh` hides the same dependency one level down. The
+ * check follows that one level, because a repository script is a file this
+ * checker can read. It does not follow further: past that lies a shell, and
+ * guessing at a shell is how a gate acquires opinions it cannot defend.
+ */
+export function reachesNode(workflow, readScript) {
+  const runsNode = (source) =>
+    commandsIn(source).some((command) => /(?:^|[\s|&;("'`])node[\s"'`]/.test(command));
+
+  if (runsNode(workflow)) {
+    return true;
+  }
+  return [...workflow.matchAll(/(?<![\w/.-])(scripts\/[\w.-]+\.(?:sh|mjs))/g)]
+    .map((match) => readScript(match[1]))
+    .some((source) => source !== null && runsNode(source));
+}
+
 /** Status-check contexts the protection script requires. */
 export function protectedContexts(script) {
   const json = script.match(/<<'JSON'\n([\s\S]*?)\nJSON/);
@@ -498,6 +572,52 @@ async function main() {
     problems.push(error.message);
   }
 
+  // One fact, one copy: .nvmrc pins the Node these gates run on, and every
+  // workflow that reaches Node reads it from there.
+  const declaredNode = (await readFile(join(root, ".nvmrc"), "utf8").catch(() => null))?.trim();
+  const scriptSources = new Map(
+    await Promise.all(
+      (await readdir(join(root, "scripts")))
+        .filter((name) => [".sh", ".mjs"].includes(extname(name)))
+        .map(async (name) => [
+          `scripts/${name}`,
+          await readFile(join(root, "scripts", name), "utf8"),
+        ]),
+    ),
+  );
+  let pinnedWorkflows = 0;
+  if (!declaredNode || !/^\d+(\.\d+)*$/.test(declaredNode)) {
+    problems.push(".nvmrc: no plain Node version where the drift check looks");
+  }
+  for (const file of (await readdir(join(root, ".github/workflows"))).sort()) {
+    const workflow = await readFile(join(root, ".github/workflows", file), "utf8");
+    const pins = nodeVersionPins(workflow);
+    const needsNode = reachesNode(workflow, (path) =>
+      scriptSources.get(path) ?? null,
+    );
+
+    for (const pin of pins) {
+      if (pin.inline !== undefined) {
+        problems.push(
+          `.github/workflows/${file}: pins node-version ${pin.inline} inline; ` +
+            "read .nvmrc with node-version-file so the version has one copy",
+        );
+      } else if (pin.file !== ".nvmrc") {
+        problems.push(
+          `.github/workflows/${file}: reads Node from ${pin.file}, not .nvmrc`,
+        );
+      } else {
+        pinnedWorkflows += 1;
+      }
+    }
+    if (needsNode && pins.length === 0) {
+      problems.push(
+        `.github/workflows/${file}: runs Node without a setup-node step, so it ` +
+          "uses whatever version the runner image ships",
+      );
+    }
+  }
+
   // One fact, three copies: the workflows define the job names, the protection
   // script requires them, and the release chapter lists them.
   const workflows = await Promise.all(
@@ -565,8 +685,8 @@ async function main() {
       `${links} local links, ${references} named paths ` +
       `(${generated.size} generated, skipped), ${contexts} required checks ` +
       "agreeing across workflow, protection script, and chapter, a consistent " +
-      "MSRV, and the recorded " +
-      "campaign breakdown",
+      `MSRV, ${pinnedWorkflows} workflows reading Node ${declaredNode} from ` +
+      ".nvmrc, and the recorded campaign breakdown",
   );
 }
 

@@ -7,7 +7,9 @@ import {
   ignoredPaths,
   localLinks,
   msrvClaims,
+  nodeVersionPins,
   protectedContexts,
+  reachesNode,
   referencedPaths,
   countLoomModels,
   countProptestLaws,
@@ -298,4 +300,51 @@ test("an MSRV prefix must end on a component boundary", () => {
   assert.ok(!boundary("1.85", "1.850.0"));
   assert.ok(!boundary("1.85.1", "1.85.10"));
   assert.ok(!boundary("1.85", "1.9"));
+});
+
+test("a Node version written inline is distinguished from one read from a file", () => {
+  const workflow = `
+      - uses: actions/setup-node@abc # v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-node@abc # v4
+        with:
+          node-version-file: .nvmrc
+`;
+
+  assert.deepEqual(nodeVersionPins(workflow), [
+    { inline: "22", file: undefined },
+    { inline: undefined, file: ".nvmrc" },
+  ]);
+});
+
+test("a workflow with no setup-node reports no pin at all", () => {
+  // Distinct from pinning badly: nothing to compare, and the caller decides
+  // whether that silence matters by asking whether the workflow reaches Node.
+  assert.deepEqual(nodeVersionPins("      - run: cargo test\n"), []);
+});
+
+test("Node reached through a repository script is still Node", () => {
+  // The dependency that hides: the workflow says only `run: scripts/build.sh`,
+  // and the script inside it is what needs a version nobody pinned.
+  const workflow = "      - run: scripts/build.sh\n";
+  const scripts = { "scripts/build.sh": "#!/usr/bin/env bash\nnode --test scripts/x.test.mjs\n" };
+
+  assert.ok(reachesNode(workflow, (path) => scripts[path] ?? null));
+  assert.ok(!reachesNode(workflow, () => null), "an unreadable script claims nothing");
+});
+
+test("setup-node itself is not mistaken for running Node", () => {
+  const workflow = `
+      - uses: actions/setup-node@abc # v4
+        with:
+          node-version-file: .nvmrc
+      - run: cargo test --workspace
+`;
+
+  assert.ok(!reachesNode(workflow, () => null));
+});
+
+test("a cargo step that merely mentions a node in prose does not count", () => {
+  assert.ok(!reachesNode("      - name: Check every node in the graph\n", () => null));
 });

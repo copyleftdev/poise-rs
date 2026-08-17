@@ -28,6 +28,10 @@ scripts/install-hooks.sh
 The hook checks release metadata and shared workspace versions. It does not run
 fuzzing, mutation testing, or a full compile.
 
+The validation scripts under `scripts/` run on Node. `.nvmrc` holds the version
+CI uses, so `nvm use` or `fnm use` gives you the same one; a drift check refuses
+any workflow that pins a Node version somewhere else.
+
 ## Fast validation
 
 ```console
