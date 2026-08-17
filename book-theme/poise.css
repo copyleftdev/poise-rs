@@ -475,6 +475,36 @@ main {
   }
 }
 
+/*
+ * The control-loop map is a drawing with labels, not an illustration: scaled to
+ * the measure, its type falls below eight pixels and the diagram becomes
+ * decoration. Where the window has room beside the text column it widens into
+ * it, and it always links to its own full size. (mdBook sets a 10px root, so
+ * these rem values are a tenth of what they look like.)
+ */
+.content main p:has(img[src$="control-loop.svg"]) {
+  max-width: none;
+}
+
+.content main a:has(> img[src$="control-loop.svg"]) {
+  display: block;
+  width: 100%;
+  max-width: none;
+  border-bottom: 0;
+}
+
+.content main img[src$="control-loop.svg"] {
+  width: 100%;
+  border: 1px solid var(--line-bright);
+  border-radius: 12px;
+}
+
+@media (min-width: 1200px) {
+  .content main a:has(> img[src$="control-loop.svg"]) {
+    width: min(100% + 24rem, 112rem);
+  }
+}
+
 @media print {
   body {
     background: white;

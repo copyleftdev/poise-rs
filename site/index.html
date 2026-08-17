@@ -41,7 +41,29 @@
     </header>
 
     <main id="top">
-      <section class="orrery" aria-labelledby="hero-title">
+      <section class="control-loop" aria-labelledby="hero-title">
+        <div class="control-loop-copy">
+          <p class="eyebrow"><span>01</span> The control loop</p>
+          <h1 id="hero-title">Load balancing,<br><em>made observable.</em></h1>
+          <p class="hero-deck">Composable Rust primitives for selection, affinity, health, discovery, and dispatch. Six ownership boundaries, drawn once, so the whole request path is legible before you write a line against it.</p>
+          <div class="hero-actions">
+            <a class="primary-action" href="#capabilities">Explore the system <span aria-hidden="true">↓</span></a>
+            <a class="text-action anchor" href="book/">Read the engineering book <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
+
+        <figure class="control-loop-figure">
+          <div class="control-loop-plate">
+            <img src="assets/control-loop.svg" width="1731" height="1378" alt="Isometric map of the Poise control loop. Discovery publishes an immutable snapshot; health and load signals narrow it to an eligible candidate slice; a policy returns an index; Tower dispatches using a readiness permit it already held; and the classified outcome returns along a feedback lane into load trackers, the outcome window, health circuits, and metrics.">
+          </div>
+          <figcaption>
+            <span><strong>Shape says what a thing is.</strong> Drums hold mutable state you write to, the stack is one immutable revision over older ones, plates carry borrowed candidates, the hexagonal prism is the only solid that turns a slice into an index, instruments measure, and dashed silhouettes are optional or outside the library.</span>
+            <span><strong>Color says who owns it.</strong> No single crate owns very much, which is the point of the split.</span>
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="orrery" aria-labelledby="orrery-title">
         <canvas id="field" aria-hidden="true"></canvas>
         <div class="field-fallback" id="field-fallback">
           <svg aria-hidden="true" viewBox="0 0 640 640">
@@ -53,11 +75,10 @@
         </div>
 
         <div class="hero-copy">
-          <p class="eyebrow"><span>01</span> The invariant orrery</p>
-          <h1 id="hero-title">Load balancing,<br><em>made observable.</em></h1>
-          <p class="hero-deck">Composable Rust primitives for selection, affinity, health, discovery, and dispatch—each held in orbit by explicit behavioral laws.</p>
+          <p class="eyebrow"><span>02</span> The invariant orrery</p>
+          <h2 id="orrery-title">Every force,<br><em>held in relation.</em></h2>
+          <p class="hero-deck">The same primitives as a live field: each capability in orbit, replayed against the verification layer that currently holds it.</p>
           <div class="hero-actions">
-            <a class="primary-action" href="#capabilities">Explore the system <span aria-hidden="true">↓</span></a>
             <button class="text-action" id="replay-button" type="button">
               <span class="play-symbol" aria-hidden="true">Ⅱ</span>
               <span class="play-label">Pause replay</span>
@@ -93,14 +114,14 @@
       </section>
 
       <section class="premise" aria-label="Design premise">
-        <p class="section-number">02 / The premise</p>
+        <p class="section-number">03 / The premise</p>
         <blockquote>Selection is only the visible moment. <em>Poise makes every force around it explicit.</em></blockquote>
         <p>Membership. Eligibility. Choice. Dispatch. Feedback. Each concern has a boundary you can inspect, compose, and replace.</p>
       </section>
 
       <section class="atlas" id="capabilities" aria-labelledby="atlas-title">
         <header class="section-heading">
-          <p class="section-number">03 / Capability atlas</p>
+          <p class="section-number">04 / Capability atlas</p>
           <h2 id="atlas-title">A policy system,<br>not a single algorithm.</h2>
           <p>Select a family to reorganize the orrery. The same symbolic language describes the primitive, its state, and the proof currently exercising it.</p>
         </header>
@@ -158,7 +179,7 @@
 
       <section class="verification" id="verification" aria-labelledby="verification-title">
         <header class="section-heading verification-heading">
-          <p class="section-number">04 / Verification ledger</p>
+          <p class="section-number">05 / Verification ledger</p>
           <h2 id="verification-title">Proof is part<br>of the interface.</h2>
           <div class="provenance">
             <span class="provenance-mark" aria-hidden="true"></span>
@@ -211,7 +232,7 @@
       </section>
 
       <section class="architecture" aria-labelledby="architecture-title">
-        <p class="section-number">05 / Composition path</p>
+        <p class="section-number">06 / Composition path</p>
         <h2 id="architecture-title">The hot path stays small.</h2>
         <ol>
           <li><span>01</span><strong>Membership</strong><small>versioned snapshots</small></li>
@@ -229,7 +250,7 @@
       </section>
 
       <section class="closing" aria-labelledby="closing-title">
-        <p class="section-number">06 / Begin with the contracts</p>
+        <p class="section-number">07 / Begin with the contracts</p>
         <h2 id="closing-title">Make the easy policies easy.<br><em>Keep the hard ones possible.</em></h2>
         <div>
           <a class="primary-action" data-repo-link href="https://github.com/" rel="noreferrer">Read the source <span aria-hidden="true">↗</span></a>
