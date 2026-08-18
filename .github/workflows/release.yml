@@ -28,7 +28,7 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
       # The gate that decides whether a publish may proceed runs on Node, so it
       # is pinned like every other toolchain this workflow depends on.
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
       - run: node scripts/check-release-metadata.mjs --publishable
