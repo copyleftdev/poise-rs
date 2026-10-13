@@ -29,7 +29,7 @@ jobs:
       # run Node scripts. Without this step they ran on whatever Node the runner
       # image happened to ship, which is a toolchain nobody chose and one image
       # update away from failing the publish for a reason nobody changed.
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
 
@@ -134,4 +134,4 @@ jobs:
     steps:
       - name: Publish passing or failing evidence
         id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
