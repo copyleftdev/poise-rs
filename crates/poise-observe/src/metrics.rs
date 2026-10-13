@@ -232,6 +232,9 @@ impl LatencyHistogram {
     }
 }
 
+// `fetch_update` is deprecated in favour of `try_update`, which is newer than
+// the 1.85 MSRV. `allow`, not `expect`: on 1.85 nothing is deprecated here.
+#[allow(deprecated)]
 fn saturating_add(counter: &AtomicU64, amount: u64) {
     let _ = counter.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
         Some(current.saturating_add(amount))

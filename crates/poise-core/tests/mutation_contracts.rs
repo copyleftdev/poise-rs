@@ -134,7 +134,7 @@ fn public_error_messages_are_nonempty_and_specific() {
         PickError::InconsistentTopology,
     ];
     for error in pick_errors {
-        assert!(!error.to_string().is_empty());
+        assert_ne!(error.to_string(), "");
     }
 
     let invalid_weight: InvalidWeight = Weight::new(0).unwrap_err();
@@ -154,25 +154,20 @@ fn public_error_messages_are_nonempty_and_specific() {
             .to_string(),
         "peak EWMA half-life must be non-zero"
     );
-    assert!(
-        !BoundedLoadConfig::new(99)
+    assert_ne!(BoundedLoadConfig::new(99).unwrap_err().to_string(), "");
+    assert_ne!(
+        PriorityConfig::new(99, 50, PanicMode::default())
             .unwrap_err()
-            .to_string()
-            .is_empty()
+            .to_string(),
+        ""
     );
-    assert!(
-        !PriorityConfig::new(99, 50, PanicMode::default())
+    assert_ne!(
+        RingHashConfig::new(NonZeroU32::new(2).unwrap(), NonZeroUsize::new(1).unwrap(),)
             .unwrap_err()
-            .to_string()
-            .is_empty()
+            .to_string(),
+        ""
     );
-    assert!(
-        !RingHashConfig::new(NonZeroU32::new(2).unwrap(), NonZeroUsize::new(1).unwrap(),)
-            .unwrap_err()
-            .to_string()
-            .is_empty()
-    );
-    assert!(!MaglevConfig::new(4).unwrap_err().to_string().is_empty());
+    assert_ne!(MaglevConfig::new(4).unwrap_err().to_string(), "");
     assert_eq!(
         ProbePoolConfig::new(NonZeroUsize::MIN, NonZeroU32::MIN, Duration::ZERO)
             .unwrap_err()
@@ -190,7 +185,7 @@ fn public_error_messages_are_nonempty_and_specific() {
         .map(std::string::ToString::to_string)
         .collect();
     for message in &rendered {
-        assert!(!message.is_empty());
+        assert_ne!(message, "");
     }
     assert_eq!(
         rendered

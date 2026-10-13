@@ -315,7 +315,7 @@ mod tests {
         assert_eq!(report.mean_success_rate(), None);
         assert_eq!(report.standard_deviation(), None);
         assert_eq!(report.ejection_threshold(), None);
-        assert!(report.ejected().is_empty());
+        assert_eq!(report.ejected(), []);
     }
 
     #[test]
@@ -361,7 +361,7 @@ mod tests {
 
         let report = detector.evaluate(&observations);
         assert_eq!(report.standard_deviation(), Some(0.0));
-        assert!(report.ejected().is_empty());
+        assert_eq!(report.ejected(), []);
     }
 
     #[test]
