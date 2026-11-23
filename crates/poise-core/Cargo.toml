@@ -41,7 +41,7 @@ name = "membership"
 harness = false
 
 [target.'cfg(loom)'.dependencies]
-loom = "=0.7.2"
+loom = "=0.7.3"
 
 [lints]
 workspace = true
